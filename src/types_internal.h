@@ -529,6 +529,8 @@ struct _mpr_dev {
     int num_linked;             //!< Number of linked devices.
     int status;
 
+    mpr_list child_devs;        //!< List of Child Devices associated with this parent.
+
     uint8_t subscribed;
 };
 
