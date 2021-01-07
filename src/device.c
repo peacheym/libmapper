@@ -1214,3 +1214,34 @@ void mpr_dev_manage_subscriber(mpr_dev dev, lo_address addr, int flags,
         mpr_net_send(net);
     }
 }
+
+
+//! TODO: Move these functions into appropriate spots
+
+int mpr_dev_add_child_dev(mpr_dev dev, mpr_dev child){
+    mpr_dev list_dev = (mpr_dev)mpr_list_add_item((void**)&dev->child_devs, sizeof(mpr_dev_t));
+    
+    // list_dev->obj.type = child->obj.type;
+    list_dev->prefix = child->prefix;
+    printf("Adding %s to %s as child node\n", child->prefix, dev->prefix);
+    // dev->obj.graph = g;
+    // dev->loc = (mpr_local_dev)calloc(1, sizeof(mpr_local_dev_t));
+
+
+    return 1;
+}
+
+mpr_list mpr_dev_get_children(mpr_dev dev){
+   
+    //TODO: Replace this copied and pasted item with something meaningful.
+    // RETURN_UNLESS(dev && dev->obj.graph->sigs, 0);
+    // mpr_list qry = mpr_list_new_query((const void**)&dev->obj.graph->sigs,
+    //                                   cmp_qry_dev_sigs, "hi", dev->obj.id, dir);
+    // return mpr_list_start(qry);
+
+
+    RETURN_UNLESS(dev && dev->child_devs, 0);
+    //printf("Node Has Children\n");
+
+    return mpr_list_from_data(dev->child_devs);
+}
