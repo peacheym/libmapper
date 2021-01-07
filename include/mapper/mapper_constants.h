@@ -13,6 +13,7 @@ extern "C" {
 
 enum {
     MPR_DEV             = 0x01,             //!< Devices only.
+    MPR_CHILD_DEV       = 0x11, //TODO: Ask if this is valid?
     MPR_SIG_IN          = 0x02,             //!< Input signals.
     MPR_SIG_OUT         = 0x04,             //!< Output signals.
     MPR_SIG             = 0x06,             //!< All signals.

@@ -48,6 +48,7 @@ mpr_sig mpr_sig_new(mpr_dev dev, mpr_dir dir, const char *name, int len,
                         "signal direction must be either input or output.\n")
     mpr_graph g = dev->obj.graph;
     mpr_sig s;
+    printf("TEST THIS\n");
     if ((s = mpr_dev_get_sig_by_name(dev, name)))
         return s;
 

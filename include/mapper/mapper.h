@@ -271,9 +271,11 @@ void mpr_dev_set_time(mpr_dev dev, mpr_time time);
  *  \param dev          The device to use. */
 void mpr_dev_process_outputs(mpr_dev dev);
 
-int mpr_dev_add_child_dev(mpr_dev dev, mpr_dev child);
+mpr_dev mpr_dev_add_child_dev(mpr_dev dev, mpr_dev child);
 
 mpr_list mpr_dev_get_children(mpr_dev dev);
+
+void mpr_dev_poll_all_children(mpr_dev dev); //TODO: Consider making this an internal function.
 
 /** @} */ // end of group Devices
 
