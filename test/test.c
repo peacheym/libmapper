@@ -293,5 +293,47 @@ int main(int argc, char ** argv)
     cleanup_src();
     printf("...................Test %s\x1B[0m.\n",
            result ? "\x1B[31mFAILED" : "\x1B[32mPASSED");
+
+
+    //! TODO: Move this into its own test for hierarchial structures.
+    mpr_dev parent = mpr_dev_new("TestParent", 0);
+    mpr_dev child1 = mpr_dev_new("TestChild", 0);
+    mpr_dev child2 = mpr_dev_new("TestChild2", 0);
+    mpr_dev child3 = mpr_dev_new("TestChild3", 0);
+
+
+    mpr_dev_add_child_dev(parent, child1);
+    mpr_dev_add_child_dev(parent, child2);
+    mpr_dev_add_child_dev(parent, child3);
+
+    mpr_list c_list = mpr_dev_get_children(parent);
+    printf("Size of C List: %d\n", mpr_list_get_size(c_list));
+
+    while(c_list){
+        printf("Item\n");
+        //mpr_dev dev = (mpr_dev)*devs;
+        // mpr_dev child_item = (mpr_dev)*c_list;
+        c_list = mpr_list_get_next(c_list);
+    }
+
+    double mnd=0, mxd=1;
+    sendsig_1 = mpr_sig_new(child1, MPR_DIR_OUT, "outsig_1", 1, MPR_DBL, "Hz",
+                        &mnd, &mxd, NULL, NULL, 0);
+
+    // Can poll each individually
+    // for(int i=0; i<100; i++){
+    //     mpr_dev_poll(parent, 25);
+    //     mpr_dev_poll(child1, 25);
+    //     mpr_dev_poll(child2, 25);
+    //     mpr_dev_poll(child3, 25);
+    // }
+
+    for(int i=0; i<1000; i++){
+        mpr_dev_poll(parent, 0);
+        mpr_dev_poll_all_children(parent);
+    }
+    printf("Ending Test\n");
+    
     return result;
+
 }

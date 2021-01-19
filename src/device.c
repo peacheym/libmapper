@@ -1222,7 +1222,7 @@ mpr_dev mpr_dev_add_child_dev(mpr_dev dev, mpr_dev child){
 
     // Insert the child item into the list.
     mpr_list_add_item((void**)&dev->child_devs, sizeof(mpr_dev_t));
-    child->obj.type = MPR_CHILD_DEV; // Make it known that this device is a child.
+    child->obj.type = MPR_CHILD_DEV; // Make it known to the system that this device is a child.
 
     printf("Adding %s to %s as child node\n", child->prefix, dev->prefix); //Todo: Remove debugging statement.
     return child;
@@ -1242,6 +1242,20 @@ void mpr_dev_poll_all_children(mpr_dev dev){
     while(c_list){
         mpr_dev child_item = (mpr_dev)*c_list;
         mpr_dev_poll(child_item, 0);
+        c_list = mpr_list_get_next(c_list);
+    }
+
+}
+
+
+void mpr_dev_free_all_children(mpr_dev dev){
+
+    mpr_list c_list = mpr_dev_get_children(dev);
+
+    // Loop through each item in list of children, poll each with non-blocking (0ms) action.
+    while(c_list){
+        mpr_dev child_item = (mpr_dev)*c_list;
+        mpr_dev_free(child_item);
         c_list = mpr_list_get_next(c_list);
     }
 
