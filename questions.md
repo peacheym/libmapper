@@ -20,3 +20,6 @@
 4) Where in makefiles (or elsewhere) do I add options for more C lib tests?
 
 5) How are the values determined for the ENUMs such as DEV type?
+
+
+6) Should there be some way to copy mpr_objs for passing both a child and a parent, add to list and then copy attributes from passed child to new list item???
