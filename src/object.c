@@ -180,10 +180,12 @@ void mpr_obj_push(mpr_obj o)
     else if (o->type & MPR_MAP) {
         mpr_net_use_bus(n);
         mpr_map m = (mpr_map)o;
-        if (m->status >= MPR_STATUS_ACTIVE)
+        if (m->status >= MPR_STATUS_ACTIVE){
             mpr_map_send_state(m, -1, MSG_MAP_MOD);
-        else
+        }
+        else{
             mpr_map_send_state(m, -1, MSG_MAP);
+        }
     }
     else {
         trace("mpr_obj_push(): unknown object type %d\n", o->type);
@@ -287,4 +289,17 @@ void mpr_obj_print(mpr_obj o, int staged)
         }
     }
     printf("\n");
+}
+
+mpr_obj mpr_obj_add_child(mpr_obj parent, const char *name, mpr_graph g){
+    
+    // Add a new child object to the list of children associated with the parent object.
+    mpr_obj child = (mpr_obj)mpr_list_add_item((void**)&parent->children, sizeof(mpr_obj_t));
+    
+    child->type = MPR_OBJ; // 31
+    child->graph = g;
+
+    //Todo: Add name when other branch is merged.
+
+    return child;
 }

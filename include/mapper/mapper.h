@@ -191,6 +191,15 @@ void mpr_obj_push(mpr_obj obj);
  *  \param staged       1 to print staged properties, 0 otherwise. */
 void mpr_obj_print(mpr_obj obj, int staged);
 
+//TODO: Ensure these functions are in proper location and properly documented.
+
+/*! Add a child object to a parent object .
+ *  \param parent          The parent object that is being added to.
+ *  \param name            The name for this mpr_obj.
+ *  \param graph           The graph associated with this obj, or 0.
+ *  \return                The child object that is being added. */
+mpr_obj mpr_obj_add_child(mpr_obj parent, const char *name, mpr_graph g);
+
 /*** Devices ***/
 
 /*! @defgroup devices Devices
@@ -202,7 +211,7 @@ void mpr_obj_print(mpr_obj obj, int staged);
        user-specified metadata.  Device signals can be connected, which is
        accomplished by requests from an external GUI or session manager. */
 
-/*! Allocate and initialize a device.
+/*! Allocate a device.
  *  \param name         A short descriptive string to identify the device.
  *                      Must not contain spaces or the slash character '/'.
  *  \param g            A previously allocated graph structure to use.
@@ -210,6 +219,12 @@ void mpr_obj_print(mpr_obj obj, int staged);
  *  \return             A newly allocated device.  Should be freed
  *                      using mpr_dev_free(). */
 mpr_dev mpr_dev_new(const char *name, mpr_graph g);
+
+/*! Initialize a device.
+ *  \param dev          The created device to be initialized.
+ *  \return             A newly initalized device.  Should be freed
+ *                      using mpr_dev_free(). */
+mpr_dev mpr_dev_init(mpr_dev dev);
 
 /*! Free resources used by a device.
  *  \param dev          The device to free. */
