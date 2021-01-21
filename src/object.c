@@ -302,5 +302,5 @@ void mpr_obj_add_child(mpr_obj parent, mpr_obj child){
     list_item->data = child->data;
     list_item->props = child->props;
     list_item->version = child->version;
-    list_item->type = child->type;
+    list_item->type = child->type; // This should likely be a new type called CHILD or something like that.
 }
