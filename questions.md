@@ -22,11 +22,11 @@
 
 1. How on earth do mpr_lists work?
 
-2. Do mpr_lists need to be initialized in some way? OR do you start adding items immediately with mpr_list_add_item() ??
+2. Can you insert an existing item into a list? Or must you init a new one and copy details?
 
-3. Will a list from data work to make a mpr_list from a reference in the struct, no query necessary?
+3. Do mpr_lists need to be initialized in some way? OR do you start adding items immediately with mpr_list_add_item() ??
 
-4. Can you insert an existing item into a list? Or must you init a new one and copy details?
+4. Will a list from data work to make a mpr_list from a reference in the struct, no query necessary?
 
 5. Proper way to use a list?
 
@@ -49,3 +49,9 @@
 1. Scope?
 2. Publication of named instances / hierarchial structures.
 3. Anything else for me?
+
+
+
+Can an object have more than one parent?  Should it?
+Flavours of signals in units.
+Accelrometer x,y,z.
