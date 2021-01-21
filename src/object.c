@@ -291,16 +291,8 @@ void mpr_obj_print(mpr_obj o, int staged)
 
 
 
-void mpr_obj_add_child(mpr_obj parent, mpr_obj child){
-    mpr_obj list_item = (mpr_obj)mpr_list_add_item((void**)parent->children, sizeof(mpr_obj_t));
-    
-    // TODO: Ask if there should be a COPY_OBJ function or equivalent
-    //TODO: Also todo, confirm this approach even works to begin with...
-    // Copy all information from child object to new list item.
-    list_item->graph = child->graph;
-    list_item->id = child->id;
-    list_item->data = child->data;
-    list_item->props = child->props;
-    list_item->version = child->version;
-    list_item->type = child->type; // This should likely be a new type called CHILD or something like that.
+mpr_obj mpr_obj_add_child(mpr_obj parent){
+    // Add a new child object to the list of children associated with the parent object.
+    mpr_obj child = (mpr_obj)mpr_list_add_item((void**)parent->children, sizeof(mpr_obj_t));
+    return child;
 }

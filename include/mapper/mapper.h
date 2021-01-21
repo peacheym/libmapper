@@ -196,8 +196,8 @@ void mpr_obj_print(mpr_obj obj, int staged);
 
 /*! Add a child object to a parent object .
  *  \param parent          The parent object that is being added to.
- *  \param child           The child object that is being added. */
-void mpr_obj_add_child(mpr_obj parent, mpr_obj child);
+ *  \return                The child object that is being added. */
+mpr_obj mpr_obj_add_child(mpr_obj parent);
 
 
 /*** Devices ***/
