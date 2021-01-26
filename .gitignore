@@ -13,6 +13,7 @@ Makefile
 .deps
 .libs
 .DS_Store
+.vscode
 ChangeLog
 README
 aclocal.m4
@@ -84,4 +85,3 @@ test/testthread
 test/testunmap
 test/testvector
 test/testhierarchialstructure
-
