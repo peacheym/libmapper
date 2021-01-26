@@ -87,49 +87,6 @@ void init_dev_prop_tbl(mpr_dev dev)
                 LOCAL_ACCESS_ONLY | NON_MODIFIABLE);
 }
 
-/*! Allocate and initialize a device. This function is called to create a new
- *  mpr_dev, not to create a representation of remote devices. */
-mpr_dev mpr_dev_new(const char *name_prefix, mpr_graph g)
-{
-    RETURN_UNLESS(name_prefix, 0);
-    if (name_prefix[0] == '/')
-        ++name_prefix;
-    TRACE_RETURN_UNLESS(!strchr(name_prefix, '/'), NULL, "error: character '/' "
-                        "is not permitted in device name.\n");
-    if (!g) {
-        g = mpr_graph_new(0);
-        g->own = 0;
-    }
-
-    mpr_dev dev = (mpr_dev)mpr_list_add_item((void**)&g->devs, sizeof(mpr_dev_t));
-    dev->obj.type = MPR_DEV;
-    dev->obj.graph = g;
-    dev->loc = (mpr_local_dev)calloc(1, sizeof(mpr_local_dev_t));
-
-    init_dev_prop_tbl(dev);
-
-    dev->prefix = strdup(name_prefix);
-    mpr_dev_start_servers(dev);
-
-    if (!g->net.server.udp || !g->net.server.tcp) {
-        mpr_dev_free(dev);
-        return NULL;
-    }
-
-    g->net.rtr = (mpr_rtr)calloc(1, sizeof(mpr_rtr_t));
-    g->net.rtr->dev = dev;
-
-    dev->loc->ordinal.val = 1;
-    dev->loc->idmaps.active = (mpr_id_map*) malloc(sizeof(mpr_id_map));
-    dev->loc->idmaps.active[0] = 0;
-    dev->loc->num_sig_groups = 1;
-
-    mpr_net_add_dev(&g->net, dev);
-
-    dev->status = MPR_STATUS_STAGED;
-    return dev;
-}
-
 //! Free resources used by a mpr device.
 void mpr_dev_free(mpr_dev dev)
 {
@@ -1213,4 +1170,111 @@ void mpr_dev_manage_subscriber(mpr_dev dev, lo_address addr, int flags,
         mpr_dev_send_maps(dev, dir);
         mpr_net_send(net);
     }
+}
+
+
+//! TODO: Move this to appropriate location after confirming it works.
+/*! Allocate and initialize a device. This function is called to create a new
+ *  mpr_dev, not to create a representation of remote devices. */
+mpr_dev mpr_dev_new_from_parent(mpr_obj parent, const char *name_prefix, mpr_graph g)
+{
+    RETURN_UNLESS(name_prefix, 0);
+    if (name_prefix[0] == '/')
+        ++name_prefix;
+    TRACE_RETURN_UNLESS(!strchr(name_prefix, '/'), NULL, "error: character '/' "
+                                                         "is not permitted in device name.\n");
+    if (!g)
+    {
+        g = mpr_graph_new(0);
+        g->own = 0;
+    }
+
+
+    mpr_dev dev = (mpr_dev)mpr_list_add_item((void **)&g->devs, sizeof(mpr_dev_t));
+    dev->obj.graph = g;
+    dev->obj.type = MPR_DEV;
+
+    //TODO: I would like to be able to replace the entire dev->obj with the struct that is pointed to by parent.
+
+    dev->loc = (mpr_local_dev)calloc(1, sizeof(mpr_local_dev_t));
+
+    init_dev_prop_tbl(dev);
+
+    dev->prefix = strdup(name_prefix);
+    mpr_dev_start_servers(dev);
+
+    if (!g->net.server.udp || !g->net.server.tcp)
+    {
+        mpr_dev_free(dev);
+        return NULL;
+    }
+
+    g->net.rtr = (mpr_rtr)calloc(1, sizeof(mpr_rtr_t));
+    g->net.rtr->dev = dev;
+
+    dev->loc->ordinal.val = 1;
+    dev->loc->idmaps.active = (mpr_id_map *)malloc(sizeof(mpr_id_map));
+    dev->loc->idmaps.active[0] = 0;
+    dev->loc->num_sig_groups = 1;
+
+    mpr_net_add_dev(&g->net, dev);
+
+    dev->status = MPR_STATUS_STAGED;
+    
+    //dev->obj.parent_dev = &dev; //TODO: Ensure that there is a connection from mpr_dev->obj to the mpr_dev
+
+    return dev;
+}
+
+
+/*! Allocate and initialize a device. This function is called to create a new
+ *  mpr_dev, not to create a representation of remote devices. */
+mpr_dev mpr_dev_new(const char *name_prefix, mpr_graph g)
+{
+    RETURN_UNLESS(name_prefix, 0);
+    if (name_prefix[0] == '/')
+        ++name_prefix;
+    TRACE_RETURN_UNLESS(!strchr(name_prefix, '/'), NULL, "error: character '/' "
+                                                         "is not permitted in device name.\n");
+    if (!g)
+    {
+        g = mpr_graph_new(0);
+        g->own = 0;
+    }
+
+/*
+    -- mpr_obj STRUCT FOR REFERENCE --
+
+    mpr_graph graph;                //!< Pointer back to the graph.
+    mpr_id id;                      //!< Unique id for this object.
+    void *data;                     //!< User context pointer.
+    struct _mpr_dict props;         //!< Properties associated with this signal.
+    int version;                    //!< Version number.
+    mpr_type type;                  //!< Object type.
+    mpr_list children;              //!< List of child objects.
+    mpr_dev parent_dev;
+*/
+
+    mpr_obj obj = (mpr_obj)malloc(sizeof(struct _mpr_obj));
+    obj->graph = g;
+    obj->type = MPR_OBJ;
+    
+    return mpr_dev_new_from_parent(obj, name_prefix, g);
+}
+
+
+int mpr_dev_poll_all_children(mpr_dev dev)
+{
+    //Poll the parent it self
+    mpr_dev_poll(dev, 0);
+
+    mpr_list children = mpr_list_from_data(dev->obj.children);
+    while (children) {
+        mpr_obj child = (mpr_obj)*children;        
+        children = mpr_list_get_next(children);
+        
+        // Poll this child
+        mpr_dev_poll(child->parent_dev, 0);
+    }
+    return 0;
 }

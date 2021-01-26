@@ -199,6 +199,8 @@ void mpr_obj_print(mpr_obj obj, int staged);
  *  \return                The child object that is being added. */
 mpr_obj mpr_obj_add_child(mpr_obj parent);
 
+void mpr_obj_list_child_types(mpr_obj parent);
+
 
 /*** Devices ***/
 
@@ -252,6 +254,7 @@ mpr_list mpr_dev_get_maps(mpr_dev dev, mpr_dir dir);
  *  \return             The number of handled messages. May be zero if there was
  *                      nothing to do. */
 int mpr_dev_poll(mpr_dev dev, int block_ms);
+int mpr_dev_poll_all_children(mpr_dev dev);
 
 /*! Detect whether a device is completely initialized.
  *  \param dev          The device to query.
@@ -279,6 +282,9 @@ void mpr_dev_set_time(mpr_dev dev, mpr_time time);
  *  more performant.
  *  \param dev          The device to use. */
 void mpr_dev_process_outputs(mpr_dev dev);
+
+
+mpr_dev mpr_dev_new_from_parent(mpr_obj parent, const char *name, mpr_graph g);
 
 /** @} */ // end of group Devices
 

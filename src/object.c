@@ -289,10 +289,20 @@ void mpr_obj_print(mpr_obj o, int staged)
     printf("\n");
 }
 
-
-
 mpr_obj mpr_obj_add_child(mpr_obj parent){
     // Add a new child object to the list of children associated with the parent object.
-    mpr_obj child = (mpr_obj)mpr_list_add_item((void**)parent->children, sizeof(mpr_obj_t));
+    mpr_obj child = (mpr_obj)mpr_list_add_item((void**)&parent->children, sizeof(mpr_obj_t));
+    child->type = MPR_OBJ;
     return child;
+}
+
+void mpr_obj_list_child_types(mpr_obj parent){
+
+    mpr_list children = mpr_list_from_data(parent->children);
+    while (children) {
+        mpr_obj child = (mpr_obj)*children;        
+        children = mpr_list_get_next(children);
+        printf("Type: %d\n", mpr_obj_get_type(child));
+    }
+    return;
 }
