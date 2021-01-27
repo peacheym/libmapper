@@ -289,20 +289,32 @@ void mpr_obj_print(mpr_obj o, int staged)
     printf("\n");
 }
 
-mpr_obj mpr_obj_add_child(mpr_obj parent){
+mpr_obj mpr_obj_add_child_obj(mpr_obj parent){
     // Add a new child object to the list of children associated with the parent object.
     mpr_obj child = (mpr_obj)mpr_list_add_item((void**)&parent->children, sizeof(mpr_obj_t));
-    child->type = MPR_OBJ;
+    child->type = MPR_OBJ; // 31
     return child;
 }
 
-void mpr_obj_list_child_types(mpr_obj parent){
+mpr_dev mpr_obj_add_child_dev(mpr_obj parent, const char *name_prefix, mpr_graph g){
+    // Add a new child object to the list of children associated with the parent object.
+    mpr_dev child = (mpr_dev)mpr_list_add_item((void**)&parent->children, sizeof(mpr_dev_t));
+    return mpr_dev_init_dev(child, name_prefix, g);
+}
 
-    mpr_list children = mpr_list_from_data(parent->children);
+int mpr_obj_poll_all_children(mpr_obj obj)
+{
+    //Poll the parent itself
+    // mpr_dev_poll(dev, 0);
+
+    mpr_list children = mpr_list_from_data(obj->children);
     while (children) {
         mpr_obj child = (mpr_obj)*children;        
         children = mpr_list_get_next(children);
-        printf("Type: %d\n", mpr_obj_get_type(child));
+        
+        if(child->type == MPR_DEV){
+            mpr_dev_poll(child, 0);
+        }
     }
-    return;
+    return 0;
 }

@@ -257,7 +257,6 @@ typedef struct _mpr_obj
     int version;                    //!< Version number.
     mpr_type type;                  //!< Object type.
     mpr_list children;              //!< List of child objects.
-    mpr_dev parent_dev;            //!< Pointer to the associated mpr_dev (optional)
 } mpr_obj_t, *mpr_obj;
 
 /**** Signal ****/

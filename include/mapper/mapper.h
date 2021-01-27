@@ -197,9 +197,12 @@ void mpr_obj_print(mpr_obj obj, int staged);
 /*! Add a child object to a parent object .
  *  \param parent          The parent object that is being added to.
  *  \return                The child object that is being added. */
-mpr_obj mpr_obj_add_child(mpr_obj parent);
+mpr_obj mpr_obj_add_child_obj(mpr_obj parent);
 
-void mpr_obj_list_child_types(mpr_obj parent);
+/*! Add a child object to a parent object .
+ *  \param parent          The parent object that is being added to.
+ *  \return                The child device that is being added. */
+mpr_dev mpr_obj_add_child_dev(mpr_obj parent, const char *name_prefix, mpr_graph g);
 
 
 /*** Devices ***/
@@ -213,7 +216,7 @@ void mpr_obj_list_child_types(mpr_obj parent);
        user-specified metadata.  Device signals can be connected, which is
        accomplished by requests from an external GUI or session manager. */
 
-/*! Allocate and initialize a device.
+/*! Allocate a device.
  *  \param name         A short descriptive string to identify the device.
  *                      Must not contain spaces or the slash character '/'.
  *  \param g            A previously allocated graph structure to use.
@@ -221,6 +224,15 @@ void mpr_obj_list_child_types(mpr_obj parent);
  *  \return             A newly allocated device.  Should be freed
  *                      using mpr_dev_free(). */
 mpr_dev mpr_dev_new(const char *name, mpr_graph g);
+
+/*! Initialize a device.
+ *  \param name         A short descriptive string to identify the device.
+ *                      Must not contain spaces or the slash character '/'.
+ *  \param g            A previously allocated graph structure to use.
+ *                      If 0, one will be allocated for use with this device.
+ *  \return             A newly initalized device.  Should be freed
+ *                      using mpr_dev_free(). */
+mpr_dev mpr_dev_init_dev(mpr_dev dev, const char *name, mpr_graph g);
 
 /*! Free resources used by a device.
  *  \param dev          The device to free. */
@@ -254,7 +266,16 @@ mpr_list mpr_dev_get_maps(mpr_dev dev, mpr_dir dir);
  *  \return             The number of handled messages. May be zero if there was
  *                      nothing to do. */
 int mpr_dev_poll(mpr_dev dev, int block_ms);
+
+/*! Poll this device's children
+ *  \param dev          The device whose children will be polled.
+ *  \return             0 */
 int mpr_dev_poll_all_children(mpr_dev dev);
+
+/*! Poll this device's children
+ *  \param obj          The obj whose children will be polled (if appropriate).
+ *  \return             0 */
+int mpr_obj_poll_all_children(mpr_obj obj);
 
 /*! Detect whether a device is completely initialized.
  *  \param dev          The device to query.
@@ -282,9 +303,6 @@ void mpr_dev_set_time(mpr_dev dev, mpr_time time);
  *  more performant.
  *  \param dev          The device to use. */
 void mpr_dev_process_outputs(mpr_dev dev);
-
-
-mpr_dev mpr_dev_new_from_parent(mpr_obj parent, const char *name, mpr_graph g);
 
 /** @} */ // end of group Devices
 

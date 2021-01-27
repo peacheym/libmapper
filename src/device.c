@@ -1176,7 +1176,7 @@ void mpr_dev_manage_subscriber(mpr_dev dev, lo_address addr, int flags,
 //! TODO: Move this to appropriate location after confirming it works.
 /*! Allocate and initialize a device. This function is called to create a new
  *  mpr_dev, not to create a representation of remote devices. */
-mpr_dev mpr_dev_new_from_parent(mpr_obj parent, const char *name_prefix, mpr_graph g)
+mpr_dev mpr_dev_init_dev(mpr_dev dev, const char *name_prefix, mpr_graph g)
 {
     RETURN_UNLESS(name_prefix, 0);
     if (name_prefix[0] == '/')
@@ -1189,12 +1189,8 @@ mpr_dev mpr_dev_new_from_parent(mpr_obj parent, const char *name_prefix, mpr_gra
         g->own = 0;
     }
 
-
-    mpr_dev dev = (mpr_dev)mpr_list_add_item((void **)&g->devs, sizeof(mpr_dev_t));
     dev->obj.graph = g;
-    dev->obj.type = MPR_DEV;
-
-    //TODO: I would like to be able to replace the entire dev->obj with the struct that is pointed to by parent.
+    dev->obj.type = MPR_DEV; // Type is 1
 
     dev->loc = (mpr_local_dev)calloc(1, sizeof(mpr_local_dev_t));
 
@@ -1221,8 +1217,6 @@ mpr_dev mpr_dev_new_from_parent(mpr_obj parent, const char *name_prefix, mpr_gra
 
     dev->status = MPR_STATUS_STAGED;
     
-    //dev->obj.parent_dev = &dev; //TODO: Ensure that there is a connection from mpr_dev->obj to the mpr_dev
-
     return dev;
 }
 
@@ -1242,31 +1236,15 @@ mpr_dev mpr_dev_new(const char *name_prefix, mpr_graph g)
         g->own = 0;
     }
 
-/*
-    -- mpr_obj STRUCT FOR REFERENCE --
+    mpr_dev dev = (mpr_dev)mpr_list_add_item((void **)&g->devs, sizeof(mpr_dev_t));
 
-    mpr_graph graph;                //!< Pointer back to the graph.
-    mpr_id id;                      //!< Unique id for this object.
-    void *data;                     //!< User context pointer.
-    struct _mpr_dict props;         //!< Properties associated with this signal.
-    int version;                    //!< Version number.
-    mpr_type type;                  //!< Object type.
-    mpr_list children;              //!< List of child objects.
-    mpr_dev parent_dev;
-*/
-
-    mpr_obj obj = (mpr_obj)malloc(sizeof(struct _mpr_obj));
-    obj->graph = g;
-    obj->type = MPR_OBJ;
-    
-    return mpr_dev_new_from_parent(obj, name_prefix, g);
+    return mpr_dev_init_dev(dev, name_prefix, g);
 }
-
 
 int mpr_dev_poll_all_children(mpr_dev dev)
 {
-    //Poll the parent it self
-    mpr_dev_poll(dev, 0);
+    //Poll the parent itself
+    // mpr_dev_poll(dev, 0);
 
     mpr_list children = mpr_list_from_data(dev->obj.children);
     while (children) {
@@ -1274,7 +1252,7 @@ int mpr_dev_poll_all_children(mpr_dev dev)
         children = mpr_list_get_next(children);
         
         // Poll this child
-        mpr_dev_poll(child->parent_dev, 0);
+        mpr_dev_poll(child, 0);
     }
     return 0;
 }
