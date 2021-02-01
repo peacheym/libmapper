@@ -180,10 +180,12 @@ void mpr_obj_push(mpr_obj o)
     else if (o->type & MPR_MAP) {
         mpr_net_use_bus(n);
         mpr_map m = (mpr_map)o;
-        if (m->status >= MPR_STATUS_ACTIVE)
+        if (m->status >= MPR_STATUS_ACTIVE){
             mpr_map_send_state(m, -1, MSG_MAP_MOD);
-        else
+        }
+        else{
             mpr_map_send_state(m, -1, MSG_MAP);
+        }
     }
     else {
         trace("mpr_obj_push(): unknown object type %d\n", o->type);
@@ -297,15 +299,29 @@ mpr_obj mpr_obj_add_child_obj(mpr_obj parent){
 }
 
 mpr_dev mpr_obj_add_child_dev(mpr_obj parent, const char *name_prefix, mpr_graph g){
+
+    RETURN_UNLESS(name_prefix, 0);
+    if (name_prefix[0] == '/')
+        ++name_prefix;
+    TRACE_RETURN_UNLESS(!strchr(name_prefix, '/'), NULL, "error: character '/' "
+                                                         "is not permitted in device name.\n");
+    if (!g)
+    {
+        g = mpr_graph_new(0);
+        g->own = 0;
+    }
+
     // Add a new child object to the list of children associated with the parent object.
     mpr_dev child = (mpr_dev)mpr_list_add_item((void**)&parent->children, sizeof(mpr_dev_t));
-    return mpr_dev_init_dev(child, name_prefix, g);
+    child->obj.graph = g;
+
+    return mpr_dev_init_dev(child, name_prefix);
 }
 
 int mpr_obj_poll_all_children(mpr_obj obj)
 {
     //Poll the parent itself
-    // mpr_dev_poll(dev, 0);
+    mpr_dev_poll((mpr_dev)obj, 0);
 
     mpr_list children = mpr_list_from_data(obj->children);
     while (children) {
@@ -313,7 +329,7 @@ int mpr_obj_poll_all_children(mpr_obj obj)
         children = mpr_list_get_next(children);
         
         if(child->type == MPR_DEV){
-            mpr_dev_poll(child, 0);
+            mpr_obj_poll_all_children((mpr_obj)child);
         }
     }
     return 0;

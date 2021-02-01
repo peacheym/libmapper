@@ -232,7 +232,7 @@ mpr_dev mpr_dev_new(const char *name, mpr_graph g);
  *                      If 0, one will be allocated for use with this device.
  *  \return             A newly initalized device.  Should be freed
  *                      using mpr_dev_free(). */
-mpr_dev mpr_dev_init_dev(mpr_dev dev, const char *name, mpr_graph g);
+mpr_dev mpr_dev_init_dev(mpr_dev dev, const char *name);
 
 /*! Free resources used by a device.
  *  \param dev          The device to free. */

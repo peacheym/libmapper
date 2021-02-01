@@ -1176,20 +1176,15 @@ void mpr_dev_manage_subscriber(mpr_dev dev, lo_address addr, int flags,
 //! TODO: Move this to appropriate location after confirming it works.
 /*! Allocate and initialize a device. This function is called to create a new
  *  mpr_dev, not to create a representation of remote devices. */
-mpr_dev mpr_dev_init_dev(mpr_dev dev, const char *name_prefix, mpr_graph g)
+mpr_dev mpr_dev_init_dev(mpr_dev dev, const char *name_prefix)
 {
     RETURN_UNLESS(name_prefix, 0);
     if (name_prefix[0] == '/')
         ++name_prefix;
     TRACE_RETURN_UNLESS(!strchr(name_prefix, '/'), NULL, "error: character '/' "
                                                          "is not permitted in device name.\n");
-    if (!g)
-    {
-        g = mpr_graph_new(0);
-        g->own = 0;
-    }
-
-    dev->obj.graph = g;
+    
+    mpr_graph g = dev->obj.graph;
     dev->obj.type = MPR_DEV; // Type is 1
 
     dev->loc = (mpr_local_dev)calloc(1, sizeof(mpr_local_dev_t));
@@ -1216,7 +1211,6 @@ mpr_dev mpr_dev_init_dev(mpr_dev dev, const char *name_prefix, mpr_graph g)
     mpr_net_add_dev(&g->net, dev);
 
     dev->status = MPR_STATUS_STAGED;
-    
     return dev;
 }
 
@@ -1237,14 +1231,16 @@ mpr_dev mpr_dev_new(const char *name_prefix, mpr_graph g)
     }
 
     mpr_dev dev = (mpr_dev)mpr_list_add_item((void **)&g->devs, sizeof(mpr_dev_t));
+    dev->obj.graph = g;
 
-    return mpr_dev_init_dev(dev, name_prefix, g);
+    return mpr_dev_init_dev(dev, name_prefix);
 }
 
 int mpr_dev_poll_all_children(mpr_dev dev)
 {
     //Poll the parent itself
     // mpr_dev_poll(dev, 0);
+    //Todo: Should polling a device imply the polling of its children? Or should that be explicit? 
 
     mpr_list children = mpr_list_from_data(dev->obj.children);
     while (children) {
