@@ -521,7 +521,7 @@ struct _mpr_dev {
     mpr_dev *linked;
 
     char *prefix;               //!< The identifier (prefix) for this device.
-    char *name;                 //!< The full name for this device, or zero.
+    // char *name;                 //!< The full name for this device, or zero.
 
     mpr_time synced;            //!< Timestamp of last sync.
 
