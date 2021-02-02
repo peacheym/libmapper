@@ -41,7 +41,7 @@ void mpr_link_init(mpr_link link)
 
     // request missing metadata
     char cmd[256];
-    snprintf(cmd, 256, "/%s/subscribe", link->remote_dev->name);
+    snprintf(cmd, 256, "/%s/subscribe", link->remote_dev->obj.name);
     NEW_LO_MSG(m, return);
     lo_message_add_string(m, "device");
     mpr_net_use_bus(net);
@@ -63,7 +63,7 @@ void mpr_link_connect(mpr_link link, const char *host, int admin_port,
     sprintf(str, "%d", admin_port);
     link->addr.admin = lo_address_new(host, str);
     trace_dev(link->local_dev, "activated router to device '%s' at %s:%d\n",
-              link->remote_dev->name, host, data_port);
+              link->remote_dev->obj.name, host, data_port);
     memset(link->bundles, 0, sizeof(mpr_bundle_t) * NUM_BUNDLES);
     mpr_dev_add_link(link->local_dev, link->remote_dev);
 }
@@ -198,9 +198,9 @@ void mpr_link_remove_map(mpr_link link, mpr_map rem)
 void mpr_link_send(mpr_link link, net_msg_t cmd)
 {
     NEW_LO_MSG(msg, return);
-    lo_message_add_string(msg, link->devs[0]->name);
+    lo_message_add_string(msg, link->devs[0]->obj.name);
     lo_message_add_string(msg, "<->");
-    lo_message_add_string(msg, link->devs[1]->name);
+    lo_message_add_string(msg, link->devs[1]->obj.name);
     mpr_net_add_msg(&link->obj.graph->net, 0, cmd, msg);
 }
 

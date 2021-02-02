@@ -934,7 +934,7 @@ void mpr_sig_send_state(mpr_sig s, net_msg_t cmd)
         /* properties */
         mpr_tbl_add_to_msg(s->loc ? s->obj.props.synced : 0, s->obj.props.staged, msg);
 
-        snprintf(str, 1024, "/%s/signal/modify", s->dev->name);
+        snprintf(str, 1024, "/%s/signal/modify", s->dev->obj.name);
         mpr_net_add_msg(&s->obj.graph->net, str, 0, msg);
         // send immediately since path string is not cached
         mpr_net_send(&s->obj.graph->net);
