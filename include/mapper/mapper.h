@@ -191,19 +191,14 @@ void mpr_obj_push(mpr_obj obj);
  *  \param staged       1 to print staged properties, 0 otherwise. */
 void mpr_obj_print(mpr_obj obj, int staged);
 
-
 //TODO: Ensure these functions are in proper location and properly documented.
 
 /*! Add a child object to a parent object .
  *  \param parent          The parent object that is being added to.
+ *  \param name            The name for this mpr_obj.
+ *  \param graph           The graph associated with this obj, or 0.
  *  \return                The child object that is being added. */
-mpr_obj mpr_obj_add_child_obj(mpr_obj parent);
-
-/*! Add a child object to a parent object .
- *  \param parent          The parent object that is being added to.
- *  \return                The child device that is being added. */
-mpr_dev mpr_obj_add_child_dev(mpr_obj parent, const char *name_prefix, mpr_graph g);
-
+mpr_obj mpr_obj_add_child(mpr_obj parent, const char *name, mpr_graph g);
 
 /*** Devices ***/
 
@@ -226,13 +221,10 @@ mpr_dev mpr_obj_add_child_dev(mpr_obj parent, const char *name_prefix, mpr_graph
 mpr_dev mpr_dev_new(const char *name, mpr_graph g);
 
 /*! Initialize a device.
- *  \param name         A short descriptive string to identify the device.
- *                      Must not contain spaces or the slash character '/'.
- *  \param g            A previously allocated graph structure to use.
- *                      If 0, one will be allocated for use with this device.
+ *  \param dev          The created device to be initialized.
  *  \return             A newly initalized device.  Should be freed
  *                      using mpr_dev_free(). */
-mpr_dev mpr_dev_init_dev(mpr_dev dev, const char *name);
+mpr_dev mpr_dev_init(mpr_dev dev);
 
 /*! Free resources used by a device.
  *  \param dev          The device to free. */
@@ -266,16 +258,6 @@ mpr_list mpr_dev_get_maps(mpr_dev dev, mpr_dir dir);
  *  \return             The number of handled messages. May be zero if there was
  *                      nothing to do. */
 int mpr_dev_poll(mpr_dev dev, int block_ms);
-
-/*! Poll this device's children
- *  \param dev          The device whose children will be polled.
- *  \return             0 */
-int mpr_dev_poll_all_children(mpr_dev dev);
-
-/*! Poll this device's children
- *  \param obj          The obj whose children will be polled (if appropriate).
- *  \return             0 */
-int mpr_obj_poll_all_children(mpr_obj obj);
 
 /*! Detect whether a device is completely initialized.
  *  \param dev          The device to query.

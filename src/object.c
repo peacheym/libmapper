@@ -291,46 +291,15 @@ void mpr_obj_print(mpr_obj o, int staged)
     printf("\n");
 }
 
-mpr_obj mpr_obj_add_child_obj(mpr_obj parent){
+mpr_obj mpr_obj_add_child(mpr_obj parent, const char *name, mpr_graph g){
+    
     // Add a new child object to the list of children associated with the parent object.
     mpr_obj child = (mpr_obj)mpr_list_add_item((void**)&parent->children, sizeof(mpr_obj_t));
+    
     child->type = MPR_OBJ; // 31
+    child->graph = g;
+
+    //Todo: Add name when other branch is merged.
+
     return child;
-}
-
-mpr_dev mpr_obj_add_child_dev(mpr_obj parent, const char *name_prefix, mpr_graph g){
-
-    RETURN_UNLESS(name_prefix, 0);
-    if (name_prefix[0] == '/')
-        ++name_prefix;
-    TRACE_RETURN_UNLESS(!strchr(name_prefix, '/'), NULL, "error: character '/' "
-                                                         "is not permitted in device name.\n");
-    if (!g)
-    {
-        g = mpr_graph_new(0);
-        g->own = 0;
-    }
-
-    // Add a new child object to the list of children associated with the parent object.
-    mpr_dev child = (mpr_dev)mpr_list_add_item((void**)&parent->children, sizeof(mpr_dev_t));
-    child->obj.graph = g;
-
-    return mpr_dev_init_dev(child, name_prefix);
-}
-
-int mpr_obj_poll_all_children(mpr_obj obj)
-{
-    //Poll the parent itself
-    mpr_dev_poll((mpr_dev)obj, 0);
-
-    mpr_list children = mpr_list_from_data(obj->children);
-    while (children) {
-        mpr_obj child = (mpr_obj)*children;        
-        children = mpr_list_get_next(children);
-        
-        if(child->type == MPR_DEV){
-            mpr_obj_poll_all_children((mpr_obj)child);
-        }
-    }
-    return 0;
 }
