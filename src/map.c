@@ -37,7 +37,7 @@ static int _sort_sigs(int num, mpr_sig *s, int *o)
             if (res1 < 0)
                 break;
             else if (0 == res1) {
-                res2 = strcmp(s[o[j]]->name, s[o[j+1]]->name);
+                res2 = strcmp(s[o[j]]->obj.name, s[o[j+1]]->obj.name);
                 if (0 == res2) {
                     // abort: identical signal names
                     return 1;
@@ -113,10 +113,10 @@ mpr_map mpr_map_new(int num_src, mpr_sig *src, int num_dst, mpr_sig *dst)
     int i, j;
     for (i = 0; i < num_src; i++) {
         for (j = 0; j < num_dst; j++) {
-            if (   strcmp(src[i]->name, dst[j]->name)==0
+            if (   strcmp(src[i]->obj.name, dst[j]->obj.name)==0
                 && strcmp(src[i]->dev->obj.name, dst[j]->dev->obj.name)==0) {
                 trace("Cannot connect signal '%s:%s' to itself.\n",
-                      mpr_dev_get_name(src[i]->dev), src[i]->name);
+                      mpr_dev_get_name(src[i]->dev), src[i]->obj.name);
                 return 0;
             }
         }
@@ -168,7 +168,7 @@ mpr_map mpr_map_new(int num_src, mpr_sig *src, int num_dst, mpr_sig *dst)
         if (src[order[i]]->dev->obj.graph == g)
             o = (mpr_obj)src[order[i]];
         else if (!(o = mpr_graph_get_obj(g, MPR_SIG, src[order[i]]->obj.id))) {
-            o = (mpr_obj)mpr_graph_add_sig(g, src[order[i]]->name, src[order[i]]->dev->obj.name, 0);
+            o = (mpr_obj)mpr_graph_add_sig(g, src[order[i]]->obj.name, src[order[i]]->dev->obj.name, 0);
             if (!o->id) {
                 o->id = src[order[i]]->obj.id;
                 ((mpr_sig)o)->dir = src[order[i]]->dir;

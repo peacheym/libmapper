@@ -338,7 +338,7 @@ typedef struct _mpr_sig {
     mpr_local_sig loc;
     mpr_dev dev;
     char *path;             //! OSC path.  Must start with '/'.
-    char *name;             //! The name of this signal (path+1).
+    // char *name;             //! The name of this signal (path+1).
 
     char *unit;             //!< The unit of this signal, or NULL for N/A.
     void *min;              //!< The minimum of this signal, or NULL for N/A.

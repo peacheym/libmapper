@@ -86,7 +86,7 @@ void mpr_sig_init(mpr_sig s, mpr_dir dir, const char *name, int len,
     int i, str_len = strlen(name)+2;
     s->path = malloc(str_len);
     snprintf(s->path, str_len, "/%s", name);
-    s->name = (char*)s->path+1;
+    s->obj.name = (char*)s->path+1;
     s->len = len;
     s->type = type;
     s->dir = dir ?: MPR_DIR_OUT;
@@ -133,7 +133,7 @@ void mpr_sig_init(mpr_sig s, mpr_dir dir, const char *name, int len,
     mpr_tbl_link(t, PROP(LEN), 1, MPR_INT32, &s->len, rem_mod);
     mpr_tbl_link(t, PROP(MAX), s->len, s->type, &s->max, MODIFIABLE | INDIRECT);
     mpr_tbl_link(t, PROP(MIN), s->len, s->type, &s->min, MODIFIABLE | INDIRECT);
-    mpr_tbl_link(t, PROP(NAME), 1, MPR_STR, &s->name, NON_MODIFIABLE | INDIRECT);
+    mpr_tbl_link(t, PROP(NAME), 1, MPR_STR, &s->obj.name, NON_MODIFIABLE | INDIRECT);
     mpr_tbl_link(t, PROP(NUM_INST), 1, MPR_INT32, &s->num_inst, NON_MODIFIABLE);
     mpr_tbl_link(t, PROP(NUM_MAPS_IN), 1, MPR_INT32, &s->num_maps_in, NON_MODIFIABLE);
     mpr_tbl_link(t, PROP(NUM_MAPS_OUT), 1, MPR_INT32, &s->num_maps_out, NON_MODIFIABLE);
@@ -246,7 +246,7 @@ void mpr_sig_call_handler(mpr_sig sig, int evt, mpr_id inst, int len,
 {
     // abort if signal is already being processed - might be a local loop
     if (sig->loc->locked) {
-        trace_dev(sig->dev, "Mapping loop detected on signal %s! (2)\n", sig->name);
+        trace_dev(sig->dev, "Mapping loop detected on signal %s! (2)\n", sig->obj.name);
         return;
     }
     // non-instanced signals cannot have a null value
@@ -470,7 +470,7 @@ int mpr_sig_get_idmap_with_GID(mpr_sig s, mpr_id GID, int flags, mpr_time t, int
     else {
         /* TODO: Once signal groups are explicit, allow re-mapping to
          * another instance if possible. */
-        trace("Signal %s has no instance %"PR_MPR_ID" available.\n", s->name, map->LID);
+        trace("Signal %s has no instance %"PR_MPR_ID" available.\n", s->obj.name, map->LID);
         return -1;
     }
 
@@ -514,7 +514,7 @@ int mpr_sig_get_idmap_with_GID(mpr_sig s, mpr_id GID, int flags, mpr_time t, int
     else {
         si = _find_inst_by_id(s, map->LID);
         TRACE_RETURN_UNLESS(si && !si->active, -1, "Signal %s has no instance %"
-                            PR_MPR_ID" available.", s->name, map->LID);
+                            PR_MPR_ID" available.", s->obj.name, map->LID);
         si->active = 1;
         _init_inst(si);
         i = _add_idmap(s, si, map);
@@ -633,14 +633,14 @@ void mpr_sig_set_value(mpr_sig sig, mpr_id id, int len, mpr_type type, const voi
     }
     if (!mpr_type_get_is_num(type)) {
 #ifdef DEBUG
-        trace("called update on signal '%s' with non-number type '%c'\n", sig->name, type);
+        trace("called update on signal '%s' with non-number type '%c'\n", sig->obj.name, type);
 #endif
         return;
     }
     if (len && (len != sig->len)) {
 #ifdef DEBUG
         trace("called update on signal '%s' with value length %d (should be  %d)\n",
-              sig->name, len, sig->len);
+              sig->obj.name, len, sig->len);
 #endif
         return;
     }
@@ -859,7 +859,7 @@ int mpr_sig_full_name(mpr_sig s, char *name, int len)
     int dev_name_len = strlen(dev_name);
     if (dev_name_len >= len)
         return 0;
-    if ((dev_name_len + strlen(s->name) + 1) > len)
+    if ((dev_name_len + strlen(s->obj.name) + 1) > len)
         return 0;
 
     snprintf(name, len, "%s%s", dev_name, s->path);
@@ -929,7 +929,7 @@ void mpr_sig_send_state(mpr_sig s, net_msg_t cmd)
 
     char str[1024];
     if (cmd == MSG_SIG_MOD) {
-        lo_message_add_string(msg, s->name);
+        lo_message_add_string(msg, s->obj.name);
 
         /* properties */
         mpr_tbl_add_to_msg(s->loc ? s->obj.props.synced : 0, s->obj.props.staged, msg);
