@@ -310,7 +310,7 @@ int mpr_dev_handler(const char *path, const char *types, lo_arg **argv, int argc
 
     TRACE_RETURN_UNLESS(sig && (dev = sig->dev), 0, "error in mpr_dev_handler, "
                         "cannot retrieve user data\n");
-    TRACE_DEV_RETURN_UNLESS(sig->num_inst, 0, "signal '%s' has no instances.\n", sig->name);
+    TRACE_DEV_RETURN_UNLESS(sig->num_inst, 0, "signal '%s' has no instances.\n", sig->obj.name);
     RETURN_UNLESS(argc, 0);
 
     // We need to consider that there may be properties appended to the msg
@@ -616,7 +616,7 @@ mpr_sig mpr_dev_get_sig_by_name(mpr_dev dev, const char *sig_name)
     mpr_list sigs = mpr_list_from_data(dev->obj.graph->sigs);
     while (sigs) {
         mpr_sig sig = (mpr_sig)*sigs;
-        if ((sig->dev == dev) && strcmp(sig->name, skip_slash(sig_name))==0)
+        if ((sig->dev == dev) && strcmp(sig->obj.name, skip_slash(sig_name))==0)
             return sig;
         sigs = mpr_list_get_next(sigs);
     }

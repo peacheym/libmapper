@@ -1121,7 +1121,7 @@ static int handler_sig_mod(const char *path, const char *types, lo_arg **av,
     TRACE_DEV_RETURN_UNLESS(sig, 0, "no signal found with name '%s'.\n", &av[0]->s);
 
     mpr_msg props = mpr_msg_parse_props(ac-1, &types[1], &av[1]);
-    trace_dev(dev, "received %s '%s' + %d properties.\n", path, sig->name, props->num_atoms);
+    trace_dev(dev, "received %s '%s' + %d properties.\n", path, sig->obj.name, props->num_atoms);
 
     if (mpr_sig_set_from_msg(sig, props)) {
         if (dev->loc->subscribers) {
@@ -1366,8 +1366,8 @@ static mpr_map find_map(mpr_net net, const char *types, int ac, lo_arg **av,
 #ifdef DEBUG
             trace_graph("  %s", map->num_src > 1 ? "[" : "");
             for (i = 0; i < map->num_src; i++)
-                printf("'%s', ", map->src[i]->sig->name);
-            printf("\b\b%s -> '%s'\n", map->num_src > 1 ? "]" : "", map->dst->sig->name);
+                printf("'%s', ", map->src[i]->sig->obj.name);
+            printf("\b\b%s -> '%s'\n", map->num_src > 1 ? "]" : "", map->dst->sig->obj.name);
 #endif
             is_loc = mpr_obj_get_prop_as_int32((mpr_obj)map, MPR_PROP_IS_LOCAL, NULL);
             RETURN_UNLESS(!loc || is_loc, MPR_MAP_ERROR);

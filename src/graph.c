@@ -513,7 +513,7 @@ static int _compare_slot_names(const void *l, const void *r)
 {
     int result = strcmp((*(mpr_slot*)l)->sig->dev->obj.name, (*(mpr_slot*)r)->sig->dev->obj.name);
     if (0 == result)
-        return strcmp((*(mpr_slot*)l)->sig->name, (*(mpr_slot*)r)->sig->name);
+        return strcmp((*(mpr_slot*)l)->sig->obj.name, (*(mpr_slot*)r)->sig->obj.name);
     return result;
 }
 
@@ -688,9 +688,9 @@ mpr_map mpr_graph_add_map(mpr_graph g, mpr_id id, int num_src, const char **src_
         if (!rc) {
             trace_graph("updated %d props for map [", updated);
             for (i = 0; i < map->num_src; i++) {
-                printf("%s:%s, ", map->src[i]->sig->dev->obj.name, map->src[i]->sig->name);
+                printf("%s:%s, ", map->src[i]->sig->dev->obj.name, map->src[i]->sig->obj.name);
             }
-            printf("\b\b] -> [%s:%s]\n", map->dst->sig->dev->obj.name, map->dst->sig->name);
+            printf("\b\b] -> [%s:%s]\n", map->dst->sig->dev->obj.name, map->dst->sig->obj.name);
         }
 #endif
         RETURN_UNLESS(map->status >= MPR_STATUS_ACTIVE, map);
