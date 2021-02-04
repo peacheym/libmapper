@@ -22,6 +22,19 @@ sure to consult the tutorial to get started with libmapper concepts.
 
      @{ Objects provide a generic representation of Devices, Signals, and Maps. */
 
+/*! Allocate and initialize an object.
+ *  \param name         A short descriptive string to identify the object.
+ *                      Must not contain spaces or the slash character '/'.
+ *  \param g            A previously allocated graph structure to use.
+ *                      If 0, one will be allocated for use with this device.
+ *  \return             A newly allocated object.  Should be freed
+ *                      using mpr_obj_free(). */
+mpr_obj mpr_obj_new(const char *name, mpr_graph g);
+
+/*! Free resources used by a object.
+ *  \param obj          The object to free. */
+void mpr_obj_free(mpr_obj obj);
+
 /*! Return the internal mpr_graph structure used by an object.
  *  \param obj          The object to query.
  *  \return             The mpr_graph used by this object. */
