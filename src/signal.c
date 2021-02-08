@@ -602,6 +602,43 @@ int mpr_sig_reserve_inst(mpr_sig sig, int num, mpr_id *ids, void **data)
     return count;
 }
 
+int mpr_sig_reserve_named_inst(mpr_sig sig, char **names, int num, mpr_id *ids, void **data)
+{
+    printf("Reserving named instances\n");
+
+    // RETURN_UNLESS(sig && sig->loc && names, 0);
+    // int i = 0, count = 0, highest = -1, result;
+    // if (sig->num_inst == 1 && !sig->loc->inst[0]->id && !sig->loc->inst[0]->data) {
+    //     // we will overwite the default instance first
+    //     if (ids)
+    //         sig->loc->inst[0]->id = ids[0];
+    //     if (data)
+    //         sig->loc->inst[0]->data = data[0];
+    //     ++i;
+    //     ++count;
+    // }
+    // for (; i < num; i++) {
+    //     result = _reserve_inst(sig, ids ? &ids[i] : 0, data ? data[i] : 0);
+    //     if (result == -1)
+    //         continue;
+    //     highest = result;
+    //     ++count;
+    // }
+    // if (highest != -1)
+    //     mpr_rtr_num_inst_changed(sig->obj.graph->net.rtr, sig, highest + 1);
+    // return count;
+
+    //! Implement named instances below.
+
+    /* This statement is for testing/dev purposes. */
+    printf("There are %d names\nThey are:\n", num);
+    for(int i =0; i<num; i++){
+        printf("%s\t",names[i]);
+    }
+
+    return 0; // Todo: Replace
+}
+
 int mpr_sig_get_inst_is_active(mpr_sig sig, mpr_id id)
 {
     RETURN_UNLESS(sig, 0);

@@ -385,6 +385,18 @@ void mpr_sig_set_cb(mpr_sig sig, mpr_sig_handler *handler, int events);
  *  \return             Number of instances added. */
 int mpr_sig_reserve_inst(mpr_sig sig, int num, mpr_id *ids, void **data);
 
+//! Todo: Edit the following documentation list once I have finalized the function header.
+/*! Add new instances to the reserve list. Note that if instance ids are
+ *  specified, libmapper will not add multiple instances with the same id.
+ *  \param sig          The signal to which the instances will be added.
+ *  \param num          The number of instances to add.
+ *  \param ids          Array of integer ids, one for each new instance,
+ *                      or 0 for automatically-generated instance ids.
+ *  \param data         Array of user context pointers, one for each new instance,
+ *                      or 0 if not needed.
+ *  \return             Number of instances added. */
+int mpr_sig_reserve_named_inst(mpr_sig sig, char **names, int num, mpr_id *ids, void **data);
+
 /*! Release a specific instance of a signal by removing it from the list of
  *  active instances and adding it to the reserve list.
  *  \param sig          The signal to operate on.
