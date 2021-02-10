@@ -66,7 +66,7 @@ void init_dev_prop_tbl(mpr_dev dev)
     mpr_list qry = mpr_list_new_query((const void**)&dev->obj.graph->devs,
                                       cmp_qry_linked, "v", &dev);
     mpr_tbl_link(tbl, PROP(LINKED), 1, MPR_LIST, qry, NON_MODIFIABLE | PROP_OWNED);
-    mpr_tbl_link(tbl, PROP(NAME), 1, MPR_STR, &dev->name, mod | INDIRECT | LOCAL_ACCESS_ONLY);
+    mpr_tbl_link(tbl, PROP(NAME), 1, MPR_STR, &dev->obj.name, mod | INDIRECT | LOCAL_ACCESS_ONLY);
     mpr_tbl_link(tbl, PROP(NUM_MAPS_IN), 1, MPR_INT32, &dev->num_maps_in, mod);
     mpr_tbl_link(tbl, PROP(NUM_MAPS_OUT), 1, MPR_INT32, &dev->num_maps_out, mod);
     mpr_tbl_link(tbl, PROP(NUM_SIGS_IN), 1, MPR_INT32, &dev->num_inputs, mod);
@@ -310,7 +310,7 @@ int mpr_dev_handler(const char *path, const char *types, lo_arg **argv, int argc
 
     TRACE_RETURN_UNLESS(sig && (dev = sig->dev), 0, "error in mpr_dev_handler, "
                         "cannot retrieve user data\n");
-    TRACE_DEV_RETURN_UNLESS(sig->num_inst, 0, "signal '%s' has no instances.\n", sig->name);
+    TRACE_DEV_RETURN_UNLESS(sig->num_inst, 0, "signal '%s' has no instances.\n", sig->obj.name);
     RETURN_UNLESS(argc, 0);
 
     // We need to consider that there may be properties appended to the msg
@@ -616,7 +616,7 @@ mpr_sig mpr_dev_get_sig_by_name(mpr_dev dev, const char *sig_name)
     mpr_list sigs = mpr_list_from_data(dev->obj.graph->sigs);
     while (sigs) {
         mpr_sig sig = (mpr_sig)*sigs;
-        if ((sig->dev == dev) && strcmp(sig->name, skip_slash(sig_name))==0)
+        if ((sig->dev == dev) && strcmp(sig->obj.name, skip_slash(sig_name))==0)
             return sig;
         sigs = mpr_list_get_next(sigs);
     }
@@ -968,13 +968,13 @@ void mpr_dev_start_servers(mpr_dev dev)
 const char *mpr_dev_get_name(mpr_dev dev)
 {
     RETURN_UNLESS(!dev->loc || (dev->loc->registered && dev->loc->ordinal.locked), 0);
-    if (dev->name)
-        return dev->name;
+    if (dev->obj.name)
+        return dev->obj.name;
     unsigned int len = strlen(dev->prefix) + 6;
-    dev->name = (char*)malloc(len);
-    dev->name[0] = 0;
-    snprintf(dev->name, len, "%s.%d", dev->prefix, dev->loc->ordinal.val);
-    return dev->name;
+    dev->obj.name = (char*)malloc(len);
+    dev->obj.name[0] = 0;
+    snprintf(dev->obj.name, len, "%s.%d", dev->prefix, dev->loc->ordinal.val);
+    return dev->obj.name;
 }
 
 int mpr_dev_get_is_ready(mpr_dev dev)
@@ -1005,7 +1005,7 @@ void mpr_dev_send_state(mpr_dev dev, net_msg_t cmd)
     mpr_net net = &dev->obj.graph->net;
     if (cmd == MSG_DEV_MOD) {
         char str[1024];
-        snprintf(str, 1024, "/%s/modify", dev->name);
+        snprintf(str, 1024, "/%s/modify", dev->obj.name);
         mpr_net_add_msg(net, str, 0, msg);
         mpr_net_send(net);
     }
@@ -1062,7 +1062,7 @@ static int mpr_dev_update_linked(mpr_dev dev, mpr_msg_atom a)
             for (j = 0; j < num; j++) {
                 name = &link_list[j]->s;
                 name = name[0] == '/' ? name + 1 : name;
-                if (0 == strcmp(name, dev->linked[i]->name)) {
+                if (0 == strcmp(name, dev->linked[i]->obj.name)) {
                     found = 1;
                     break;
                 }

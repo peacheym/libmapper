@@ -141,7 +141,7 @@ void loop()
     while ((!terminate || srcgraph->links || dstgraph->links) && !done) {
         mpr_dev_poll(src, 0);
         eprintf("Updating signal %s to %d\n",
-                sendsig && sendsig->name ? sendsig->name : "", i);
+                sendsig && sendsig->obj.name ? sendsig->obj.name : "", i);
         mpr_sig_set_value(sendsig, 0, 1, MPR_INT32, &i);
         sent++;
         mpr_dev_poll(dst, 100);

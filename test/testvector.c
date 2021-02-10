@@ -165,7 +165,7 @@ void loop()
             v[j] = (float)(i + j);
             expected[j] = (double)v[j] * M[j] + B[j];
         }
-        eprintf("Updating signal %s to [", sendsig->name);
+        eprintf("Updating signal %s to [", sendsig->obj.name);
         for (j = 0; j < vec_len; j++)
             eprintf("%f, ", v[j]);
         eprintf("\b\b]\n");
