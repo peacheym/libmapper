@@ -200,6 +200,12 @@ void mpr_obj_print(mpr_obj obj, int staged);
  *  \return                The child object that is being added. */
 mpr_obj mpr_obj_add_child(mpr_obj parent, const char *name, mpr_graph g);
 
+
+/*! Get the top level parent object associated with a child obj.
+ *  \param obj             The child object.
+ *  \return                The child's top level parent. */
+mpr_obj mpr_obj_get_top_level_parent(mpr_obj obj);
+
 /*** Devices ***/
 
 /*! @defgroup devices Devices
@@ -328,7 +334,7 @@ typedef void mpr_sig_handler(mpr_sig sig, mpr_sig_evt evt, mpr_id inst, int leng
  *                      updated.
  *  \param events       Bitflags for types of events we are interested in.
  *  \return             The new signal. */
-mpr_sig mpr_sig_new(mpr_dev parent, mpr_dir dir, const char *name, int len,
+mpr_sig mpr_sig_new(mpr_obj parent, mpr_dir dir, const char *name, int len,
                     mpr_type type, const char *unit, const void *min,
                     const void *max, int *num_inst, mpr_sig_handler *handler,
                     int events);

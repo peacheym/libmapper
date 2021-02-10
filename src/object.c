@@ -298,8 +298,21 @@ mpr_obj mpr_obj_add_child(mpr_obj parent, const char *name, mpr_graph g){
     
     child->type = MPR_OBJ; // 31
     child->graph = g;
+    child->parent = parent; // link the parent of this object
 
     //Todo: Add name when other branch is merged.
 
     return child;
+}
+
+mpr_obj mpr_obj_get_top_level_parent(mpr_obj obj){
+    mpr_obj current = obj;
+
+    // Loop through the tree of map_obj until the top level parent is found.
+    while (current->parent)
+        current = current->parent;
+
+    return current;
+
+
 }

@@ -1179,8 +1179,6 @@ void mpr_dev_manage_subscriber(mpr_dev dev, lo_address addr, int flags,
 mpr_dev mpr_dev_init(mpr_dev dev)
 {   
     mpr_graph g = dev->obj.graph;
-    dev->obj.type = MPR_DEV; // Type is 1
-
     dev->loc = (mpr_local_dev)calloc(1, sizeof(mpr_local_dev_t));
 
     init_dev_prop_tbl(dev);
@@ -1231,7 +1229,9 @@ mpr_dev mpr_dev_new(const char *name_prefix, mpr_graph g)
 
 
     mpr_dev dev = (mpr_dev)mpr_list_add_item((void **)&g->devs, sizeof(mpr_dev_t));
-
+    
+    dev->obj.type = MPR_DEV;
+    dev->obj.parent = 0; // this device IS the top level parent.
     dev->obj.graph = g;
     dev->prefix = strdup(name_prefix);
 

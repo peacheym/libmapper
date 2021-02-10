@@ -85,3 +85,4 @@ test/testthread
 test/testunmap
 test/testvector
 test/testhierarchialstructure
+test/testnamedinstances
