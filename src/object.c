@@ -316,3 +316,37 @@ mpr_obj mpr_obj_get_top_level_parent(mpr_obj obj){
 
 
 }
+/* TODO: Move to proper spot when deemed complete. */
+mpr_obj mpr_obj_new(const char *name, mpr_graph g){
+    RETURN_UNLESS(name);
+    TRACE_RETURN_UNLESS(name[strlen(name)-1] != '/', 0,
+                        "trailing slash detected in object name.\n");
+
+    if (!g) {
+        g = mpr_graph_new(0);
+        g->own = 0;
+    }
+
+    mpr_obj obj = (mpr_obj*)malloc(sizeof(mpr_obj_t)); // Is this correct?
+    obj->type = MPR_OBJ;
+
+    obj->name = (char*)malloc(strlen(name));
+    obj->graph = g;
+
+    return obj;
+}
+
+void mpr_obj_free(mpr_obj obj){
+    RETURN_UNLESS(obj);
+    
+    // Free name
+    free(obj->name);
+
+    // Free graph if appropriate
+
+
+    // Free children objects
+    // Todo: Once nested mpr_obj branch is merged, be sure to free mpr_obj children also.
+
+
+}

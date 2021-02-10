@@ -83,7 +83,7 @@ void mpr_rtr_process_sig(mpr_rtr rtr, mpr_sig sig, int idmap_idx, const void *va
 {
     // abort if signal is already being processed - might be a local loop
     if (sig->loc->locked) {
-        trace_dev(rtr->dev, "Mapping loop detected on signal %s! (1)\n", sig->name);
+        trace_dev(rtr->dev, "Mapping loop detected on signal %s! (1)\n", sig->obj.name);
         return;
     }
     mpr_id_map idmap = sig->loc->idmaps[idmap_idx].map;

@@ -646,7 +646,7 @@ static void mpr_net_maybe_send_ping(mpr_net net, int force)
             if (clk->rcvd.msg_id > 0) {
                 if (num_maps)
                     trace_dev(lnk->local_dev, "Lost contact with linked device '%s' (%g seconds "
-                              "since sync).\n", lnk->remote_dev->name, elapsed);
+                              "since sync).\n", lnk->remote_dev->obj.name, elapsed);
                 // tentatively mark link as expired
                 clk->rcvd.msg_id = -1;
                 clk->rcvd.time.sec = now.sec;
@@ -654,13 +654,13 @@ static void mpr_net_maybe_send_ping(mpr_net net, int force)
             else {
                 if (num_maps) {
                     trace_dev(lnk->local_dev, "Removing link to unresponsive device '%s' (%g "
-                              "seconds since warning).\n", lnk->remote_dev->name, elapsed);
+                              "seconds since warning).\n", lnk->remote_dev->obj.name, elapsed);
                     /* TODO: release related maps, call local handlers
                      * and inform subscribers. */
                 }
                 else
                     trace_dev(lnk->local_dev, "Removing link to device '%s'.\n",
-                              lnk->remote_dev->name);
+                              lnk->remote_dev->obj.name);
                 // remove related data structures
                 mpr_rtr_remove_link(net->rtr, lnk);
                 mpr_graph_remove_link(gph, lnk, num_maps ? MPR_OBJ_EXP : MPR_OBJ_REM);
@@ -1121,7 +1121,7 @@ static int handler_sig_mod(const char *path, const char *types, lo_arg **av,
     TRACE_DEV_RETURN_UNLESS(sig, 0, "no signal found with name '%s'.\n", &av[0]->s);
 
     mpr_msg props = mpr_msg_parse_props(ac-1, &types[1], &av[1]);
-    trace_dev(dev, "received %s '%s' + %d properties.\n", path, sig->name, props->num_atoms);
+    trace_dev(dev, "received %s '%s' + %d properties.\n", path, sig->obj.name, props->num_atoms);
 
     if (mpr_sig_set_from_msg(sig, props)) {
         if (dev->loc->subscribers) {
@@ -1366,8 +1366,8 @@ static mpr_map find_map(mpr_net net, const char *types, int ac, lo_arg **av,
 #ifdef DEBUG
             trace_graph("  %s", map->num_src > 1 ? "[" : "");
             for (i = 0; i < map->num_src; i++)
-                printf("'%s', ", map->src[i]->sig->name);
-            printf("\b\b%s -> '%s'\n", map->num_src > 1 ? "]" : "", map->dst->sig->name);
+                printf("'%s', ", map->src[i]->sig->obj.name);
+            printf("\b\b%s -> '%s'\n", map->num_src > 1 ? "]" : "", map->dst->sig->obj.name);
 #endif
             is_loc = mpr_obj_get_prop_as_int32((mpr_obj)map, MPR_PROP_IS_LOCAL, NULL);
             RETURN_UNLESS(!loc || is_loc, MPR_MAP_ERROR);
@@ -1832,7 +1832,7 @@ static int handler_ping(const char *path, const char *types, lo_arg **av,
     lnk = remote ? mpr_dev_get_link_by_remote(dev, remote) : 0;
     if (lnk) {
         mpr_sync_clock clk = &lnk->clock;
-        trace_dev(dev, "ping received from linked device '%s'\n", lnk->remote_dev->name);
+        trace_dev(dev, "ping received from linked device '%s'\n", lnk->remote_dev->obj.name);
         if (av[2]->i == clk->sent.msg_id) {
             // total elapsed time since ping sent
             double elapsed = mpr_time_get_diff(now, clk->sent.time);
@@ -1882,7 +1882,7 @@ static int handler_sync(const char *path, const char *types, lo_arg **av,
     mpr_dev dev = mpr_graph_get_dev_by_name(graph, &av[0]->s);
     if (dev) {
         RETURN_UNLESS(!dev->loc, 0);
-        trace_graph("updating sync record for device '%s'\n", dev->name);
+        trace_graph("updating sync record for device '%s'\n", dev->obj.name);
         mpr_time_set(&dev->synced, MPR_NOW);
 
         if (!dev->subscribed && graph->autosub) {
@@ -1894,7 +1894,7 @@ static int handler_sync(const char *path, const char *types, lo_arg **av,
         // only create device record after requesting more information
         trace_net("requesting metadata for device '%s'.\n", &av[0]->s);
         mpr_dev_t temp;
-        temp.name = &av[0]->s;
+        temp.obj.name = &av[0]->s;
         temp.obj.version = -1;
         temp.loc = 0;
         mpr_graph_subscribe(graph, &temp, MPR_DEV, 0);

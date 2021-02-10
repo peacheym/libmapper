@@ -33,11 +33,11 @@ static int _sort_sigs(int num, mpr_sig *s, int *o)
     for (i = 1; i < num; i++) {
         j = i-1;
         while (j >= 0) {
-            res1 = strcmp(s[o[j]]->dev->name, s[o[j+1]]->dev->name);
+            res1 = strcmp(s[o[j]]->dev->obj.name, s[o[j+1]]->dev->obj.name);
             if (res1 < 0)
                 break;
             else if (0 == res1) {
-                res2 = strcmp(s[o[j]]->name, s[o[j+1]]->name);
+                res2 = strcmp(s[o[j]]->obj.name, s[o[j+1]]->obj.name);
                 if (0 == res2) {
                     // abort: identical signal names
                     return 1;
@@ -113,10 +113,10 @@ mpr_map mpr_map_new(int num_src, mpr_sig *src, int num_dst, mpr_sig *dst)
     int i, j;
     for (i = 0; i < num_src; i++) {
         for (j = 0; j < num_dst; j++) {
-            if (   strcmp(src[i]->name, dst[j]->name)==0
-                && strcmp(src[i]->dev->name, dst[j]->dev->name)==0) {
+            if (   strcmp(src[i]->obj.name, dst[j]->obj.name)==0
+                && strcmp(src[i]->dev->obj.name, dst[j]->dev->obj.name)==0) {
                 trace("Cannot connect signal '%s:%s' to itself.\n",
-                      mpr_dev_get_name(src[i]->dev), src[i]->name);
+                      mpr_dev_get_name(src[i]->dev), src[i]->obj.name);
                 return 0;
             }
         }
@@ -168,7 +168,7 @@ mpr_map mpr_map_new(int num_src, mpr_sig *src, int num_dst, mpr_sig *dst)
         if (src[order[i]]->dev->obj.graph == g)
             o = (mpr_obj)src[order[i]];
         else if (!(o = mpr_graph_get_obj(g, MPR_SIG, src[order[i]]->obj.id))) {
-            o = (mpr_obj)mpr_graph_add_sig(g, src[order[i]]->name, src[order[i]]->dev->name, 0);
+            o = (mpr_obj)mpr_graph_add_sig(g, src[order[i]]->obj.name, src[order[i]]->dev->obj.name, 0);
             if (!o->id) {
                 o->id = src[order[i]]->obj.id;
                 ((mpr_sig)o)->dir = src[order[i]]->dir;
@@ -290,11 +290,11 @@ void mpr_map_add_scope(mpr_map m, mpr_dev d)
             names[0] = (const char*)r->val;
         for (int i = 0; i < r->len; i++)
             names[i] = ((const char**)r->val)[i];
-        names[r->len] = d ? d->name : "all";
+        names[r->len] = d ? d->obj.name : "all";
         mpr_tbl_set(m->obj.props.staged, p, NULL, r->len + 1, MPR_STR, names, REMOTE_MODIFY);
     }
     else
-        mpr_tbl_set(m->obj.props.staged, p, NULL, 1, MPR_STR, d->name, REMOTE_MODIFY);
+        mpr_tbl_set(m->obj.props.staged, p, NULL, 1, MPR_STR, d->obj.name, REMOTE_MODIFY);
 }
 
 /* Here we do not edit the "scope" property directly – instead we stage a the
@@ -308,13 +308,13 @@ void mpr_map_remove_scope(mpr_map m, mpr_dev d)
     if (r && MPR_STR == r->type) {
         const char *names[r->len];
         if (1 == r->len) {
-            if (0 == strcmp((const char*)r->val, d->name))
+            if (0 == strcmp((const char*)r->val, d->obj.name))
                 mpr_tbl_remove(t, p, NULL, REMOTE_MODIFY);
         }
         else {
             int i = 0, j = 0;
             for (; i < r->len; i++) {
-                if (0 != strcmp(((const char**)r->val)[i], d->name))
+                if (0 != strcmp(((const char**)r->val)[i], d->obj.name))
                     names[j++] = ((const char**)r->val)[i];
             }
             if (j != i)
@@ -322,7 +322,7 @@ void mpr_map_remove_scope(mpr_map m, mpr_dev d)
         }
     }
     else
-        mpr_tbl_set(t, p, NULL, 1, MPR_STR, d->name, REMOTE_MODIFY);
+        mpr_tbl_set(t, p, NULL, 1, MPR_STR, d->obj.name, REMOTE_MODIFY);
 }
 
 static int _add_scope(mpr_map m, const char *name)
@@ -363,7 +363,7 @@ static int _remove_scope(mpr_map m, const char *name)
             if (!name)
                 break;
         }
-        else if (name && strcmp(m->scopes[i]->name, name) == 0)
+        else if (name && strcmp(m->scopes[i]->obj.name, name) == 0)
             break;
     }
     if (i == m->num_scopes)
@@ -397,13 +397,13 @@ static int _update_scope(mpr_map m, mpr_msg_atom a)
                     }
                     break;
                 }
-                if (strcmp(name, m->scopes[i]->name) == 0) {
+                if (strcmp(name, m->scopes[i]->obj.name) == 0) {
                     found = 1;
                     break;
                 }
             }
             if (!found && m->scopes[i])
-                updated += _remove_scope(m, m->scopes[i]->name);
+                updated += _remove_scope(m, m->scopes[i]->obj.name);
             else
                 ++i;
         }
@@ -1285,7 +1285,7 @@ int mpr_map_send_state(mpr_map m, int slot, net_msg_t cmd)
         return slot;
     NEW_LO_MSG(msg, return slot);
     char dst_name[256], src_names[1024];
-    snprintf(dst_name, 256, "%s%s", m->dst->sig->dev->name, m->dst->sig->path);
+    snprintf(dst_name, 256, "%s%s", m->dst->sig->dev->obj.name, m->dst->sig->path);
     if (MPR_DIR_IN == m->dst->dir) {
         // add mapping destination
         lo_message_add_string(msg, dst_name);
@@ -1300,7 +1300,7 @@ int mpr_map_send_state(mpr_map m, int slot, net_msg_t cmd)
         if ((slot >= 0) && link && (link != m->src[i]->link))
             break;
         result = snprintf(&src_names[len], 1024-len, "%s%s",
-                          m->src[i]->sig->dev->name, m->src[i]->sig->path);
+                          m->src[i]->sig->dev->obj.name, m->src[i]->sig->path);
         if (result < 0 || (len + result + 1) >= 1024) {
             trace("Error encoding sources for combined /mapped msg");
             lo_message_free(msg);
