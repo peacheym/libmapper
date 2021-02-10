@@ -339,14 +339,20 @@ mpr_obj mpr_obj_new(const char *name, mpr_graph g){
 void mpr_obj_free(mpr_obj obj){
     RETURN_UNLESS(obj);
     
-    // Free name
+    // Free mpr_obj's name
     free(obj->name);
 
-    // Free graph if appropriate
+    //TODO: Ask joe, should I be freeing the graph of an object here?
+    // mpr_graph_free(obj->graph);
 
+    // Free this object's children objects
+    mpr_list children = mpr_list_from_data(obj->children);
 
-    // Free children objects
-    // Todo: Once nested mpr_obj branch is merged, be sure to free mpr_obj children also.
+    while (children) {
+        mpr_obj child = (mpr_obj)*children;
+        children = mpr_list_get_next(children);
 
-
+        //Free the child at this iteration of the loop.
+        mpr_obj_free(child);
+    }
 }
