@@ -338,6 +338,9 @@ void mpr_sig_free(mpr_sig sig);
  *                      length property. */
 void mpr_sig_set_value(mpr_sig sig, mpr_id inst, int length, mpr_type type, const void *value);
 
+//! TODO: Ensure this function is properly updated.
+void mpr_sig_set_named_inst_value(mpr_sig sig, const char *name, int len, mpr_type type, const void *val);
+
 /*! Get the value of a signal instance.
  *  \param sig          The signal to operate on.
  *  \param inst         A pointer to the identifier of the instance to query,
@@ -395,7 +398,7 @@ int mpr_sig_reserve_inst(mpr_sig sig, int num, mpr_id *ids, void **data);
  *  \param data         Array of user context pointers, one for each new instance,
  *                      or 0 if not needed.
  *  \return             Number of instances added. */
-int mpr_sig_reserve_named_inst(mpr_sig sig, char **names, int num, mpr_id *ids, void **data);
+int mpr_sig_reserve_named_inst(mpr_sig sig, char **names, int num, void **data);
 
 /*! Release a specific instance of a signal by removing it from the list of
  *  active instances and adding it to the reserve list.

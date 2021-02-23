@@ -602,41 +602,51 @@ int mpr_sig_reserve_inst(mpr_sig sig, int num, mpr_id *ids, void **data)
     return count;
 }
 
-int mpr_sig_reserve_named_inst(mpr_sig sig, char **names, int num, mpr_id *ids, void **data)
+/* This function generates a unique id based on the name of the named instance.
+    Note: This function is currently a !!!WIP!!! ..
+*/
+mpr_id _generate_unique_id_from_name(const char* name){
+    // TODO: Come up with a more reliable unique ID mechanism.
+    return strlen(name);
+}
+
+int mpr_sig_reserve_named_inst(mpr_sig sig, char **names, int num, void **data)
 {
-    printf("Reserving named instances\n");
-
-    // RETURN_UNLESS(sig && sig->loc && names, 0);
-    // int i = 0, count = 0, highest = -1, result;
-    // if (sig->num_inst == 1 && !sig->loc->inst[0]->id && !sig->loc->inst[0]->data) {
-    //     // we will overwite the default instance first
-    //     if (ids)
-    //         sig->loc->inst[0]->id = ids[0];
-    //     if (data)
-    //         sig->loc->inst[0]->data = data[0];
-    //     ++i;
-    //     ++count;
-    // }
-    // for (; i < num; i++) {
-    //     result = _reserve_inst(sig, ids ? &ids[i] : 0, data ? data[i] : 0);
-    //     if (result == -1)
-    //         continue;
-    //     highest = result;
-    //     ++count;
-    // }
-    // if (highest != -1)
-    //     mpr_rtr_num_inst_changed(sig->obj.graph->net.rtr, sig, highest + 1);
-    // return count;
-
     //! Implement named instances below.
+    
+    printf("Reserving named instances\n"); // TODO: Remove when done development
+    RETURN_UNLESS(sig && sig->loc && names, 0);
+    int i = 0, count = 0, highest = -1, result;
 
-    /* This statement is for testing/dev purposes. */
-    printf("There are %d names\nThey are:\n", num);
-    for(int i =0; i<num; i++){
-        printf("%s\t",names[i]);
+    if (sig->num_inst == 1 && !sig->loc->inst[0]->id && !sig->loc->inst[0]->data) {
+        // we will overwite the default instance first
+        if (names){
+            sig->loc->inst[0]->id = _generate_unique_id_from_name(names[i]);
+            printf("%s: %d\n",names[i],(int)sig->loc->inst[0]->id); // TODO: Remove when done development
+        }
+        if (data)
+            sig->loc->inst[0]->data = data[0];
+        ++i;
+        ++count;
     }
 
-    return 0; // Todo: Replace
+    /* This statement is for testing/dev purposes. */
+    for(; i<num; i++){
+        mpr_id id = _generate_unique_id_from_name(names[i]);
+        printf("%s: %d\n",names[i], (int)id); // TODO: Remove when done development
+
+        result = _reserve_inst(sig, &id, 0);
+
+        if(result == -1)
+            continue;
+        highest = result;
+        ++count;
+    }
+    
+    if (highest != -1)
+        mpr_rtr_num_inst_changed(sig->obj.graph->net.rtr, sig, highest + 1);
+
+    return count;
 }
 
 int mpr_sig_get_inst_is_active(mpr_sig sig, mpr_id id)
@@ -659,6 +669,16 @@ void mpr_sig_update_timing_stats(mpr_sig sig, float diff)
         sig->period *= 0.99;
         sig->period += (0.01 * diff);
     }
+}
+
+void mpr_sig_set_named_inst_value(mpr_sig sig, const char *name, int len, mpr_type type, const void *val){
+
+    // Convert name into ID
+    //TODO: Do this dynamically, not hardcoded.
+    printf("Setting %s's value to be: %d\n", name, *(int*)val);
+    int id = strlen(name);
+    int nv = *(int*)val;
+    mpr_sig_set_value(sig, id, len, type, &nv);
 }
 
 void mpr_sig_set_value(mpr_sig sig, mpr_id id, int len, mpr_type type, const void *val)
