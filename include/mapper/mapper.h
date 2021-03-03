@@ -338,8 +338,27 @@ void mpr_sig_free(mpr_sig sig);
  *                      length property. */
 void mpr_sig_set_value(mpr_sig sig, mpr_id inst, int length, mpr_type type, const void *value);
 
-//! TODO: Ensure this function is properly updated.
+/*! Update the value of a signal instance.  The signal will be routed according
+ *  to external requests.
+ *  \param sig          The signal to operate on.
+ *  \param name         The name of the instance to update.
+ *  \param length       Length of the value argument. Expected to be a multiple
+ *                      of the signal length. A block of values can be accepted,
+ *                      with the current value as the last value(s) in an array.
+ *  \param type         Data type of the value argument.
+ *  \param value        A pointer to a new value for this signal.  If the signal
+ *                      type is MPR_INT32, this should be int*; if the signal
+ *                      type is MPR_FLOAT, this should be float* (etc).  It
+ *                      should be an array at least as long as the signal's
+ *                      length property. */
 void mpr_sig_set_named_inst_value(mpr_sig sig, const char *name, int len, mpr_type type, const void *val);
+
+/*! Get the value of a signal instance.
+ *  \param sig          The signal to operate on.
+ *  \param id           The id of the instance who's name is being fetched.
+ * 
+ *  \return             The name of the signal instance*/
+const char* mpr_sig_get_inst_name(mpr_sig sig, mpr_id id);
 
 /*! Get the value of a signal instance.
  *  \param sig          The signal to operate on.

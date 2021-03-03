@@ -22,6 +22,12 @@ static int _compare_inst_ids(const void *l, const void *r)
     return memcmp(&(*(mpr_sig_inst*)l)->id, &(*(mpr_sig_inst*)r)->id, sizeof(mpr_id));
 }
 
+static int _compare_inst_names(const void *l, const void *r)
+{
+    // TODO: Check that name is not (null) or set a default string name elsewhere.
+    return strcmp((*(mpr_sig_inst*)l)->name, (*(mpr_sig_inst*)r)->name);
+}
+
 static mpr_sig_inst _find_inst_by_id(mpr_sig s, mpr_id id)
 {
     RETURN_UNLESS(s->num_inst, 0);
@@ -32,6 +38,26 @@ static mpr_sig_inst _find_inst_by_id(mpr_sig s, mpr_id id)
                                  sizeof(mpr_sig_inst), _compare_inst_ids);
     return (sipp && *sipp) ? *sipp : 0;
 }
+
+static mpr_sig_inst _find_inst_by_name(mpr_sig s, const char* name)
+{
+    RETURN_UNLESS(s->num_inst, 0);
+    for(int i = 0; i<s->num_inst; i++){
+        if(0 == strcmp(name, s->loc->inst[i]->name)){
+            return s->loc->inst[i];
+        }
+    }
+    return 0;
+
+    // TODO: Fix the bsearch method for finding by names.
+    // mpr_sig_inst_t si;
+    // mpr_sig_inst sip = &si;
+    // si.name = name; //TODO: Should this be strcpy?
+    // mpr_sig_inst *sipp = bsearch(&sip, s->loc->inst, s->num_inst,
+    //                              sizeof(mpr_sig_inst), _compare_inst_names);
+    // return (sipp && *sipp) ? *sipp : 0;
+}
+
 
 // Add a signal to a parent object.
 mpr_sig mpr_sig_new(mpr_dev dev, mpr_dir dir, const char *name, int len,
@@ -527,7 +553,7 @@ int mpr_sig_get_idmap_with_GID(mpr_sig s, mpr_id GID, int flags, mpr_time t, int
     return -1;
 }
 
-static int _reserve_inst(mpr_sig sig, mpr_id *id, void *data)
+static int _reserve_inst(mpr_sig sig, mpr_id *id, void *data, const char *name)
 {
     RETURN_UNLESS(sig->num_inst < MAX_INSTANCES, -1);
     int i, cont;
@@ -544,6 +570,15 @@ static int _reserve_inst(mpr_sig sig, mpr_id *id, void *data)
     si->val = calloc(1, mpr_sig_get_vector_bytes(sig));
     si->has_val_flags = calloc(1, sig->len / 8 + 1);
     si->has_val = 0;
+
+    if (name)
+    {
+        si->name = malloc(strlen(name));
+        si->name = name; //TODO: Should this be strcpy?
+    }
+    else{
+        si->name = 0;
+    }
 
     if (id)
         si->id = *id;
@@ -591,7 +626,7 @@ int mpr_sig_reserve_inst(mpr_sig sig, int num, mpr_id *ids, void **data)
         ++count;
     }
     for (; i < num; i++) {
-        result = _reserve_inst(sig, ids ? &ids[i] : 0, data ? data[i] : 0);
+        result = _reserve_inst(sig, ids ? &ids[i] : 0, data ? data[i] : 0, 0);
         if (result == -1)
             continue;
         highest = result;
@@ -602,27 +637,18 @@ int mpr_sig_reserve_inst(mpr_sig sig, int num, mpr_id *ids, void **data)
     return count;
 }
 
-/* This function generates a unique id based on the name of the named instance.
-    Note: This function is currently a !!!WIP!!! ..
-*/
-mpr_id _generate_unique_id_from_name(const char* name){
-    // TODO: Come up with a more reliable unique ID mechanism.
-    return strlen(name);
-}
-
 int mpr_sig_reserve_named_inst(mpr_sig sig, char **names, int num, void **data)
 {
     //! Implement named instances below.
-    
-    printf("Reserving named instances\n"); // TODO: Remove when done development
     RETURN_UNLESS(sig && sig->loc && names, 0);
     int i = 0, count = 0, highest = -1, result;
 
     if (sig->num_inst == 1 && !sig->loc->inst[0]->id && !sig->loc->inst[0]->data) {
         // we will overwite the default instance first
         if (names){
-            sig->loc->inst[0]->id = _generate_unique_id_from_name(names[i]);
-            printf("%s: %d\n",names[i],(int)sig->loc->inst[0]->id); // TODO: Remove when done development
+            // Set the first instance name
+            sig->loc->inst[0]->name = malloc(strlen(names[i]));
+            sig->loc->inst[0]->name = names[i]; //TODO: Should this be strcpy?
         }
         if (data)
             sig->loc->inst[0]->data = data[0];
@@ -630,21 +656,21 @@ int mpr_sig_reserve_named_inst(mpr_sig sig, char **names, int num, void **data)
         ++count;
     }
 
-    /* This statement is for testing/dev purposes. */
     for(; i<num; i++){
-        mpr_id id = _generate_unique_id_from_name(names[i]);
-        printf("%s: %d\n",names[i], (int)id); // TODO: Remove when done development
-
-        result = _reserve_inst(sig, &id, 0);
+        result = _reserve_inst(sig, 0, data ? data[i]: 0, names[i]);
 
         if(result == -1)
             continue;
+
         highest = result;
         ++count;
     }
     
     if (highest != -1)
         mpr_rtr_num_inst_changed(sig->obj.graph->net.rtr, sig, highest + 1);
+
+    /* No stealing of named instances */
+    sig->steal_mode = MPR_STEAL_NONE;
 
     return count;
 }
@@ -673,12 +699,19 @@ void mpr_sig_update_timing_stats(mpr_sig sig, float diff)
 
 void mpr_sig_set_named_inst_value(mpr_sig sig, const char *name, int len, mpr_type type, const void *val){
 
-    // Convert name into ID
-    //TODO: Do this dynamically, not hardcoded.
-    printf("Setting %s's value to be: %d\n", name, *(int*)val);
-    int id = strlen(name);
-    int nv = *(int*)val;
-    mpr_sig_set_value(sig, id, len, type, &nv);
+    mpr_sig_inst inst = _find_inst_by_name(sig, name);
+
+    if(inst){
+        int val_to_update = *(int*)val;
+        mpr_id id = inst->id;
+
+        printf("Updating %s\n", name); // Todo: Remove after development
+        mpr_sig_set_value(sig, id, len, type, &val_to_update);
+    }
+    else{
+        //TODO: Update error message
+        printf("No Instance with name: %s\n", name);
+    }
 }
 
 void mpr_sig_set_value(mpr_sig sig, mpr_id id, int len, mpr_type type, const void *val)
@@ -1067,4 +1100,9 @@ int mpr_sig_set_from_msg(mpr_sig s, mpr_msg msg)
         }
     }
     return updated;
+}
+
+const char* mpr_sig_get_inst_name(mpr_sig sig, mpr_id id){
+    // Returns the name of the signal instance associated with the LID, or 0.
+    return (_find_inst_by_id(sig, id)->name);
 }

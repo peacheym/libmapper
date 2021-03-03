@@ -297,6 +297,8 @@ typedef struct _mpr_sig_inst
     mpr_time created;           //!< The instance's creation timestamp.
     char *has_val_flags;        //!< Indicates which vector elements have a value.
 
+    const char *name;           //!< The name of this instance, or "" //TODO: Check if the "" is proper.
+
     void *val;                  //!< The current value of this signal instance.
     mpr_time time;              //!< The time associated with the current value.
 
