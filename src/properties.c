@@ -33,6 +33,7 @@ const static_prop_t static_props[] = {
     { "@host",          1, MPR_STR,   MPR_STR },   /* MPR_PROP_HOST */
     { "@id",            1, MPR_INT64, MPR_INT64 }, /* MPR_PROP_ID */
     { "@instance",      1, MPR_INT32, MPR_INT32 }, /* MPR_PROP_INST */
+    { "@inst_names",    0, MPR_STR,   MPR_STR },   /* MPR_PROP_INST_NAMES */
     { "@is_local",      1, MPR_BOOL,  MPR_BOOL },  /* MPR_PROP_IS_LOCAL */
     { "@jitter",        1, MPR_FLT,   MPR_FLT },   /* MPR_PROP_JITTER */
     { "@length",        1, MPR_INT32, MPR_INT32 }, /* MPR_PROP_LEN */

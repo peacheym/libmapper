@@ -194,7 +194,8 @@ typedef enum {
     MSG_UNMAP,
     MSG_UNMAPPED,
     MSG_WHO,
-    NUM_MSG_STRINGS
+    NUM_MSG_STRINGS,
+    MSG_SIG_INST_NAMES
 } net_msg_t;
 
 /*! Function to call when an allocated resource is locked. */

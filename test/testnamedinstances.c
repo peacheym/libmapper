@@ -35,9 +35,12 @@ int main(int argc, char **argv)
 	char *names[] = {"Thumb", "Index", "Middle", "Ring", "Pinky"}; // Five elements
 	int num_inst = sizeof(names) / sizeof(names[0]);			   // 5
 
+	char *names2[] = {"Matthew", "Stuart", "Peachey"}; // 3 elements
+	int num_inst2 = sizeof(names2) / sizeof(names2[0]);  // 5
+
 	/* Reserve Named Instances on both ends of the map */
 	mpr_sig_reserve_named_inst(sig_out, names, num_inst, 0);
-	mpr_sig_reserve_named_inst(sig_in, names, num_inst, 0);
+	mpr_sig_reserve_named_inst(sig_in, names2, num_inst2, 0);
 
 	while (!mpr_dev_get_is_ready(src) && !mpr_dev_get_is_ready(dst))
 	{

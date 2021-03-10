@@ -672,6 +672,9 @@ int mpr_sig_reserve_named_inst(mpr_sig sig, char **names, int num, void **data)
     /* No stealing of named instances */
     sig->steal_mode = MPR_STEAL_NONE;
 
+    /* Report the names of these instances to session manager*/
+    mpr_tbl_set(sig->obj.props.synced, PROP(INST_NAMES), NULL, num, MPR_STR, names, LOCAL_MODIFY);
+    
     return count;
 }
 
@@ -705,7 +708,7 @@ void mpr_sig_set_named_inst_value(mpr_sig sig, const char *name, int len, mpr_ty
         int val_to_update = *(int*)val;
         mpr_id id = inst->id;
 
-        printf("Updating %s\n", name); // Todo: Remove after development
+        // printf("Updating %s\n", name); // Todo: Remove after development
         mpr_sig_set_value(sig, id, len, type, &val_to_update);
     }
     else{

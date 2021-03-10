@@ -1,3 +1,4 @@
+todo-list.md
 *.o
 *.class
 *.a
@@ -84,3 +85,4 @@ test/testthread
 test/testunmap
 test/testvector
 test/testnamedinstances
+test/testhierarchialstructure
