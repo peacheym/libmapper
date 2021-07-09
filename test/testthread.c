@@ -1,6 +1,7 @@
 #include <mapper/mapper.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <stdarg.h>
 #include <math.h>
 #include <unistd.h>
 #include <signal.h>
@@ -13,11 +14,6 @@
 #else
 #define SLEEP_MS(x) usleep((x)*1000)
 #endif
-
-#define eprintf(format, ...) do {               \
-    if (verbose)                                \
-        fprintf(stdout, format, ##__VA_ARGS__); \
-} while(0)
 
 int verbose = 1;
 int terminate = 0;
@@ -37,21 +33,34 @@ float expected;
 
 volatile sig_atomic_t keep_going = 1;
 
-int setup_src(char *iface)
+static void eprintf(const char *format, ...)
 {
+    va_list args;
+    if (!verbose)
+        return;
+    va_start(args, format);
+    vprintf(format, args);
+    va_end(args);
+}
+
+int setup_src(const char *iface)
+{
+    int mn = 0, mx = 1;
+    mpr_list l;
+
     src = mpr_dev_new("testthread-send", 0);
     if (!src)
         goto error;
     if (iface)
-        mpr_graph_set_interface(mpr_obj_get_graph(src), iface);
-    eprintf("source created.\n");
+        mpr_graph_set_interface(mpr_obj_get_graph((mpr_obj)src), iface);
+    eprintf("source created using interface %s.\n",
+            mpr_graph_get_interface(mpr_obj_get_graph((mpr_obj)src)));
 
-    int mn=0, mx=1;
     sendsig = mpr_sig_new(src, MPR_DIR_OUT, "outsig", 1, MPR_INT32, NULL,
                           &mn, &mx, NULL, NULL, 0);
 
     eprintf("Output signal 'outsig' registered.\n");
-    mpr_list l = mpr_dev_get_sigs(src, MPR_DIR_OUT);
+    l = mpr_dev_get_sigs(src, MPR_DIR_OUT);
     eprintf("Number of outputs: %d\n", mpr_list_get_size(l));
     mpr_list_free(l);
     return 0;
@@ -82,21 +91,24 @@ void handler(mpr_sig sig, mpr_sig_evt event, mpr_id instance, int length,
     }
 }
 
-int setup_dst(char *iface)
+int setup_dst(const char *iface)
 {
+    float mn = 0, mx = 1;
+    mpr_list l;
+
     dst = mpr_dev_new("testthread-recv", 0);
     if (!dst)
         goto error;
     if (iface)
-        mpr_graph_set_interface(mpr_obj_get_graph(dst), iface);
-    eprintf("destination created.\n");
+        mpr_graph_set_interface(mpr_obj_get_graph((mpr_obj)dst), iface);
+    eprintf("destination created using interface %s.\n",
+            mpr_graph_get_interface(mpr_obj_get_graph((mpr_obj)dst)));
 
-    float mn=0, mx=1;
     recvsig = mpr_sig_new(dst, MPR_DIR_IN, "insig", 1, MPR_FLT, NULL,
                           &mn, &mx, NULL, handler, MPR_SIG_UPDATE);
 
     eprintf("Input signal 'insig' registered.\n");
-    mpr_list l = mpr_dev_get_sigs(dst, MPR_DIR_IN);
+    l = mpr_dev_get_sigs(dst, MPR_DIR_IN);
     eprintf("Number of inputs: %d\n", mpr_list_get_size(l));
     mpr_list_free(l);
     return 0;
@@ -124,7 +136,7 @@ int setup_maps()
     mpr_obj_set_prop(map, MPR_PROP_EXPR, NULL, 1, MPR_STR, expr, 1);
     mpr_obj_push(map);
 
-    // Wait until mapping has been established
+    /* Wait until mapping has been established */
     while (!done && !mpr_map_get_is_ready(map)) {
         mpr_dev_poll(src, 10);
         mpr_dev_poll(dst, 10);
@@ -158,7 +170,7 @@ void *update_thread(void *context)
         mpr_sig_set_value(sendsig, 0, 1, MPR_INT32, &sent);
         expected = sent;
         sent++;
-        mpr_dev_process_outputs(src);
+        mpr_dev_update_maps(src);
         SLEEP_MS(period);
     }
     keep_going = 0;
@@ -213,7 +225,7 @@ int main(int argc, char **argv)
     int i, j, result = 0;
     char *iface = 0;
 
-    // process flags for -v verbose, -t terminate, -h help
+    /* process flags for -v verbose, -t terminate, -h help */
     for (i = 1; i < argc; i++) {
         if (argv[i] && argv[i][0] == '-') {
             int len = strlen(argv[i]);
@@ -275,7 +287,7 @@ int main(int argc, char **argv)
 
     loop();
 
-    if (autoconnect && (!received || sent != received)) {
+    if (autoconnect && (!received || sent > received)) {
         eprintf("Not all sent messages were received.\n");
         eprintf("Updated value %d time%s and received %d of them.\n",
                 sent, sent == 1 ? "" : "s", received);

@@ -1,15 +1,11 @@
 #include "../src/mapper_internal.h"
 #include <mapper/mapper.h>
 #include <stdio.h>
+#include <stdarg.h>
 #include <math.h>
 #include <unistd.h>
 #include <signal.h>
 #include <string.h>
-
-#define eprintf(format, ...) do {               \
-    if (verbose)                                \
-        fprintf(stdout, format, ##__VA_ARGS__); \
-} while(0)
 
 int verbose = 1;
 int terminate = 0;
@@ -29,22 +25,33 @@ int dst_linked = 0;
 int sent = 0;
 int received = 0;
 
-int setup_src(char *iface)
+static void eprintf(const char *format, ...)
 {
+    va_list args;
+    if (!verbose)
+        return;
+    va_start(args, format);
+    vprintf(format, args);
+    va_end(args);
+}
+
+int setup_src(const char *iface)
+{
+    int mn = 0, mx = 1;
+    mpr_list l;
+
     src = mpr_dev_new("testunmap-send", 0);
     if (!src)
         goto error;
     srcgraph = mpr_obj_get_graph((mpr_obj)src);
     if (iface)
         mpr_graph_set_interface(srcgraph, iface);
-    eprintf("source created.\n");
+    eprintf("source created using interface %s.\n", mpr_graph_get_interface(srcgraph));
 
-    int mn=0, mx=1;
-    sendsig = mpr_sig_new(src, MPR_DIR_OUT, "outsig", 1, MPR_INT32, NULL,
-                          &mn, &mx, NULL, NULL, 0);
+    sendsig = mpr_sig_new(src, MPR_DIR_OUT, "outsig", 1, MPR_INT32, NULL, &mn, &mx, NULL, NULL, 0);
 
     eprintf("Output signal 'outsig' registered.\n");
-    mpr_list l = mpr_dev_get_sigs(src, MPR_DIR_OUT);
+    l = mpr_dev_get_sigs(src, MPR_DIR_OUT);
     eprintf("Number of outputs: %d\n", mpr_list_get_size(l));
     mpr_list_free(l);
 
@@ -64,31 +71,24 @@ void cleanup_src()
     }
 }
 
-void handler(mpr_sig sig, mpr_sig_evt evt, mpr_id instance, int len,
-             mpr_type type, const void *val, mpr_time t)
+int setup_dst(const char *iface)
 {
-    if (val) {
-        eprintf("handler: Got %f\n", (*(float*)val));
-    }
-    received++;
-}
+    float mn = 0, mx = 1;
+    mpr_list l;
 
-int setup_dst(char *iface)
-{
     dst = mpr_dev_new("testunmap-recv", 0);
     if (!dst)
         goto error;
     dstgraph = mpr_obj_get_graph((mpr_obj)dst);
     if (iface)
         mpr_graph_set_interface(dstgraph, iface);
-    eprintf("destination created.\n");
+    eprintf("destination created using interface %s.\n", mpr_graph_get_interface(dstgraph));
 
-    float mn=0, mx=1;
-    recvsig = mpr_sig_new(dst, MPR_DIR_IN, "insig", 1, MPR_FLT, NULL,
-                          &mn, &mx, NULL, handler, MPR_SIG_UPDATE);
+    recvsig = mpr_sig_new(dst, MPR_DIR_IN, "insig", 1, MPR_FLT, NULL, &mn, &mx, NULL, NULL, 0);
+    mpr_sig_set_value(recvsig, 0, 1, MPR_FLT, &mn);
 
     eprintf("Input signal 'insig' registered.\n");
-    mpr_list l = mpr_dev_get_sigs(dst, MPR_DIR_IN);
+    l = mpr_dev_get_sigs(dst, MPR_DIR_IN);
     eprintf("Number of inputs: %d\n", mpr_list_get_size(l));
     mpr_list_free(l);
 
@@ -114,13 +114,13 @@ int setup_maps()
 
     mpr_obj_push((mpr_obj)map);
 
-    // Wait until mapping has been established
+    /* Wait until mapping has been established */
     while (!done && !mpr_map_get_is_ready(map)) {
         mpr_dev_poll(src, 10);
         mpr_dev_poll(dst, 10);
     }
 
-    // release the map
+    /* release the map */
     mpr_map_release(map);
 
     return 0;
@@ -136,15 +136,23 @@ void wait_ready()
 
 void loop()
 {
-    eprintf("Polling device..\n");
     int i = 0;
+    float dst_val, last_dst_val = -1;
+    eprintf("Polling device..\n");
     while ((!terminate || srcgraph->links || dstgraph->links) && !done) {
-        mpr_dev_poll(src, 0);
         eprintf("Updating signal %s to %d\n",
                 sendsig && sendsig->obj.name ? sendsig->obj.name : "", i);
         mpr_sig_set_value(sendsig, 0, 1, MPR_INT32, &i);
         sent++;
+        mpr_dev_poll(src, 0);
         mpr_dev_poll(dst, 100);
+        dst_val = *(float*)mpr_sig_get_value(recvsig, 0, 0);
+        if (dst_val != last_dst_val) {
+            ++received;
+            last_dst_val = dst_val;
+        }
+        /* test if we can still set value for the destination signal */
+        mpr_sig_set_value(recvsig, 0, 1, MPR_FLT, &dst_val);
         i++;
 
         if (!verbose) {
@@ -164,7 +172,7 @@ int main(int argc, char **argv)
     int i, j, result = 0;
     char *iface = 0;
 
-    // process flags for -v verbose, -t terminate, -h help
+    /* process flags for -v verbose, -t terminate, -h help */
     for (i = 1; i < argc; i++) {
         if (argv[i] && argv[i][0] == '-') {
             int len = strlen(argv[i]);
@@ -174,7 +182,8 @@ int main(int argc, char **argv)
                         printf("testunmap.c: possible arguments "
                                "-q quiet (suppress output), "
                                "-t terminate automatically, "
-                               "-h help\n");
+                               "-h help, "
+                               "--iface network interface\n");
                         return 1;
                         break;
                     case 'q':

@@ -7,6 +7,8 @@
 
 #include "pwm_synth/pwm.h"
 
+using namespace mapper;
+
 int done = 0;
 
 void ctrlc(int)
@@ -14,17 +16,13 @@ void ctrlc(int)
     done = 1;
 }
 
-void handler_freq(mpr_sig sig, mpr_sig_evt event, mpr_id instance, int length,
-                  mpr_type type, const void *value, mpr_time time)
+// use simple scalar handler
+void handler_freq(Signal&& sig, float value, Time&& time)
 {
-    if (value) {
-        float *pfreq = (float*)value;
-        set_freq(*pfreq);
-    }
+    set_freq(value);
 }
 
-void handler_gain(mpr_sig sig, mpr_sig_evt event, mpr_id instance, int length,
-                  mpr_type type, const void *value, mpr_time time)
+void handler_gain(Signal&& sig, int length, Type type, const void *value, Time&& time)
 {
     if (value) {
         float *pgain = (float*)value;
@@ -34,8 +32,7 @@ void handler_gain(mpr_sig sig, mpr_sig_evt event, mpr_id instance, int length,
         set_gain(0);
 }
 
-void handler_duty(mpr_sig sig, mpr_sig_evt event, mpr_id instance, int length,
-                  mpr_type type, const void *value, mpr_time time)
+void handler_duty(Signal&& sig, int length, Type type, const void *value, Time&& time)
 {
     if (value) {
         float *pduty = (float*)value;
@@ -47,18 +44,18 @@ int main()
 {
     signal(SIGINT, ctrlc);
 
-    mapper::Device dev("pwm");
+    Device dev("pwm");
 
     float min0 = 0;
     float max1 = 1;
     float max1000 = 1000;
 
-    dev.add_signal(MPR_DIR_IN, "/freq", 1, MPR_FLT, "Hz", &min0, &max1000, NULL,
-                   handler_freq, MPR_SIG_UPDATE);
-    dev.add_signal(MPR_DIR_IN, "/gain", 1, MPR_FLT, "Hz", &min0, &max1, NULL,
-                   handler_gain, MPR_SIG_UPDATE);
-    dev.add_signal(MPR_DIR_IN, "/duty", 1, MPR_FLT, "Hz", &min0, &max1, NULL,
-                   handler_duty, MPR_SIG_UPDATE);
+    dev.add_signal(Direction::INCOMING, "/freq", 1, Type::FLOAT, "Hz", &min0, &max1000, NULL)
+       .set_callback(handler_freq, Signal::Event::UPDATE);
+    dev.add_signal(Direction::INCOMING, "/gain", 1, Type::FLOAT, "Hz", &min0, &max1, NULL)
+       .set_callback(handler_gain, Signal::Event::UPDATE);
+    dev.add_signal(Direction::INCOMING, "/duty", 1, Type::FLOAT, "Hz", &min0, &max1, NULL)
+       .set_callback(handler_duty, Signal::Event::UPDATE);
 
     run_synth();
 
