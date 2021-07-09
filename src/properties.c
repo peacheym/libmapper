@@ -639,7 +639,7 @@ void mpr_prop_print(int len, mpr_type type, const void *val)
             /* just print signal name */
             if (1 == len) {
                 mpr_sig sig = (mpr_sig)val;
-                printf("'%s:%s', ", mpr_dev_get_name(sig->dev), sig->obj.name);
+                printf("'%s:%s', ", mpr_dev_get_name(sig->dev), sig->name);
             }
             else {
                 mpr_sig *sig = (mpr_sig*)val;

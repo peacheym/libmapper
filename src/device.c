@@ -61,7 +61,7 @@ void init_dev_prop_tbl(mpr_dev dev)
     mpr_tbl_link(tbl, PROP(ID), 1, MPR_INT64, &dev->obj.id, mod);
     qry = mpr_list_new_query((const void**)&dev->obj.graph->devs, (void*)cmp_qry_linked, "v", &dev);
     mpr_tbl_link(tbl, PROP(LINKED), 1, MPR_LIST, qry, NON_MODIFIABLE | PROP_OWNED);
-    mpr_tbl_link(tbl, PROP(NAME), 1, MPR_STR, &dev->obj.name, mod | INDIRECT | LOCAL_ACCESS_ONLY);
+    mpr_tbl_link(tbl, PROP(NAME), 1, MPR_STR, &dev->name, mod | INDIRECT | LOCAL_ACCESS_ONLY);
     mpr_tbl_link(tbl, PROP(NUM_MAPS_IN), 1, MPR_INT32, &dev->num_maps_in, mod);
     mpr_tbl_link(tbl, PROP(NUM_MAPS_OUT), 1, MPR_INT32, &dev->num_maps_out, mod);
     mpr_tbl_link(tbl, PROP(NUM_SIGS_IN), 1, MPR_INT32, &dev->num_inputs, mod);
@@ -594,7 +594,7 @@ mpr_sig mpr_dev_get_sig_by_name(mpr_dev dev, const char *sig_name)
     sigs = mpr_list_from_data(dev->obj.graph->sigs);
     while (sigs) {
         mpr_sig sig = (mpr_sig)*sigs;
-        if ((sig->dev == dev) && strcmp(sig->obj.name, skip_slash(sig_name))==0)
+        if ((sig->dev == dev) && strcmp(sig->name, skip_slash(sig_name))==0)
             return sig;
         sigs = mpr_list_get_next(sigs);
     }
@@ -1034,7 +1034,7 @@ void mpr_dev_send_state(mpr_dev dev, net_msg_t cmd)
 
     if (cmd == MSG_DEV_MOD) {
         char str[1024];
-        snprintf(str, 1024, "/%s/modify", dev->obj.name);
+        snprintf(str, 1024, "/%s/modify", dev->name);
         mpr_net_add_msg(net, str, 0, msg);
         mpr_net_send(net);
     }
@@ -1091,7 +1091,7 @@ static int mpr_dev_update_linked(mpr_dev dev, mpr_msg_atom a)
             for (j = 0; j < num; j++) {
                 name = &link_list[j]->s;
                 name = name[0] == '/' ? name + 1 : name;
-                if (0 == strcmp(name, dev->linked[i]->obj.name)) {
+                if (0 == strcmp(name, dev->linked[i]->name)) {
                     found = 1;
                     break;
                 }

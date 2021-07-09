@@ -207,9 +207,9 @@ void mpr_link_remove_map(mpr_link link, mpr_local_map rem)
 void mpr_link_send(mpr_link link, net_msg_t cmd)
 {
     NEW_LO_MSG(msg, return);
-    lo_message_add_string(msg, link->devs[0]->obj.name);
+    lo_message_add_string(msg, link->devs[0]->name);
     lo_message_add_string(msg, "<->");
-    lo_message_add_string(msg, link->devs[1]->obj.name);
+    lo_message_add_string(msg, link->devs[1]->name);
     mpr_net_add_msg(&link->obj.graph->net, 0, cmd, msg);
 }
 

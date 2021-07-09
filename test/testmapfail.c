@@ -152,7 +152,7 @@ void loop()
     int i = 0;
     eprintf("Polling device..\n");
     while ((!terminate || srcgraph->links || dstgraph->links) && !done) {
-        eprintf("Updating signal %s to %d\n", sendsig->obj.name, i);
+        eprintf("Updating signal %s to %d\n", sendsig->name, i);
         mpr_sig_set_value(sendsig, 0, 1, MPR_INT32, &i);
         sent++;
         mpr_dev_poll(src, 0);

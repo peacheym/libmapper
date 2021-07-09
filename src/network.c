@@ -1423,8 +1423,8 @@ static mpr_map find_map(mpr_net net, const char *types, int ac, lo_arg **av,
 #ifdef DEBUG
             trace_graph("  %s", map->num_src > 1 ? "[" : "");
             for (i = 0; i < map->num_src; i++)
-                printf("'%s', ", map->src[i]->sig->obj.name);
-            printf("\b\b%s -> '%s'\n", map->num_src > 1 ? "]" : "", map->dst->sig->obj.name);
+                printf("'%s', ", map->src[i]->sig->name);
+            printf("\b\b%s -> '%s'\n", map->num_src > 1 ? "]" : "", map->dst->sig->name);
 #endif
             is_loc = mpr_obj_get_prop_as_int32((mpr_obj)map, MPR_PROP_IS_LOCAL, NULL);
             RETURN_ARG_UNLESS(!loc || is_loc, MPR_MAP_ERROR);
@@ -1964,7 +1964,7 @@ static int handler_sync(const char *path, const char *types, lo_arg **av,
     else if (graph->autosub) {
         /* only create device record after requesting more information */
         mpr_dev_t temp;
-        temp.obj.name = &av[0]->s;
+        temp.name = &av[0]->s;
         temp.obj.version = -1;
         temp.is_local = 0;
         trace_net("requesting metadata for device '%s'.\n", &av[0]->s);

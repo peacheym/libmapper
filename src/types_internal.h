@@ -224,22 +224,12 @@ typedef struct _mpr_subscriber {
 
 typedef struct _mpr_obj
 {
-<<<<<<< HEAD
-    mpr_graph graph;                //!< Pointer back to the graph.
-    mpr_id id;                      //!< Unique id for this object.
-    char *name;                     //!< The full name for this object, or zero.
-    void *data;                     //!< User context pointer.
-    struct _mpr_dict props;         //!< Properties associated with this signal.
-    int version;                    //!< Version number.
-    mpr_type type;                  //!< Object type.
-=======
     struct _mpr_graph *graph;       /*!< Pointer back to the graph. */
     mpr_id id;                      /*!< Unique id for this object. */
     void *data;                     /*!< User context pointer. */
     struct _mpr_dict props;         /*!< Properties associated with this signal. */
     int version;                    /*!< Version number. */
     mpr_type type;                  /*!< Object type. */
->>>>>>> upstream/main
 } mpr_obj_t, *mpr_obj;
 
 typedef struct _mpr_graph {
@@ -373,35 +363,6 @@ typedef struct _mpr_local_sig
     uint8_t updated;                /* TODO: fold into updated_inst bitflags. */
 } mpr_local_sig_t, *mpr_local_sig;
 
-<<<<<<< HEAD
-/*! A record that describes properties of a signal. */
-typedef struct _mpr_sig {
-    mpr_obj_t obj;          // always first
-    mpr_local_sig loc;
-    mpr_dev dev;
-    char *path;             //! OSC path.  Must start with '/'.
-    // char *name;             //! The name of this signal (path+1).
-
-    char *unit;             //!< The unit of this signal, or NULL for N/A.
-    void *min;              //!< The minimum of this signal, or NULL for N/A.
-    void *max;              //!< The maximum of this signal, or NULL for N/A.
-
-    float period;           //!< Estimate of the update rate of this signal.
-    float jitter;           //!< Estimate of the timing jitter of this signal.
-
-    int dir;                //!< DIR_OUTGOING / DIR_INCOMING / DIR_BOTH
-    int len;                //!< Length of the signal vector, or 1 for scalars.
-    int num_inst;           //!< Number of instances.
-    int use_inst;           //!< 1 if using instances, 0 otherwise.
-    int num_maps_in;
-    int num_maps_out;
-
-    mpr_type type;              //!< The type of this signal.
-    mpr_steal_type steal_mode;  //!< Type of voice stealing to perform.
-} mpr_sig_t, *mpr_sig;
-
-=======
->>>>>>> upstream/main
 /**** Router ****/
 
 typedef struct _mpr_bundle {
@@ -576,36 +537,8 @@ struct _mpr_local_dev {
     uint8_t time_is_stale;
     uint8_t polling;
     uint8_t bundle_idx;
-<<<<<<< HEAD
-    uint8_t updated;
-} mpr_local_dev_t, *mpr_local_dev;
-
-
-/*! A record that keeps information about a device. */
-struct _mpr_dev {
-    mpr_obj_t obj;              // always first
-    mpr_local_dev loc;
-
-    mpr_dev *linked;
-
-    char *prefix;               //!< The identifier (prefix) for this device.
-    // char *name;                 //!< The full name for this device, or zero.
-
-    mpr_time synced;            //!< Timestamp of last sync.
-
-    int ordinal;
-    int num_inputs;             //!< Number of associated input signals.
-    int num_outputs;            //!< Number of associated output signals.
-    int num_maps_in;            //!< Number of associated incoming maps.
-    int num_maps_out;           //!< Number of associated outgoing maps.
-    int num_linked;             //!< Number of linked devices.
-    int status;
-
-    uint8_t subscribed;
-=======
     uint8_t sending;
     uint8_t receiving;
->>>>>>> upstream/main
 };
 
 /**** Messages ****/
