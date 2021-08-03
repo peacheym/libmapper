@@ -144,7 +144,7 @@ mpr_prop mpr_obj_set_prop(mpr_obj o, mpr_prop p, const char *s, int len,
     updated = mpr_tbl_set(local ? o->props.synced : o->props.staged, p, s, len, type, val, flags);
     if (updated)
         mpr_obj_increment_version(o);
-    return updated;
+    return updated ? p : MPR_PROP_UNKNOWN;
 }
 
 int mpr_obj_remove_prop(mpr_obj o, mpr_prop p, const char *s)
@@ -304,6 +304,13 @@ void mpr_obj_print(mpr_obj o, int staged)
             mpr_prop_print(len, type, val);
             printf(")");
         }
+    }
+    if (MPR_MAP == o->type) {
+        /* also print slot props */
+        mpr_map map = (mpr_map)o;
+        for (i = 0; i < map->num_src; i++)
+            mpr_slot_print(map->src[i], 0);
+        mpr_slot_print(map->dst, 1);
     }
     printf("\n");
 }
