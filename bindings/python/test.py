@@ -1,18 +1,18 @@
 #!/usr/bin/env python
 
 from __future__ import print_function
-import sys, mapper as mpr
+import sys, libmapper as mpr
 
-start = mpr.time()
+start = mpr.Time()
 
 def h(sig, event, id, val, time):
     try:
-        print(sig[mpr.PROP_NAME], 'got', val, 'at T+%.2f' % (time-start).get_double(), 'sec')
+        print(sig[mpr.Property.NAME], 'instance', id, 'got', val, 'at T+%.2f' % (time-start).get_double(), 'sec')
     except:
         print('exception')
 
 def setup(d):
-    sig = d.add_signal(mpr.DIR_IN, "freq", 1, mpr.INT32, "Hz", None, None, None, h)
+    sig = d.add_signal(mpr.Direction.INCOMING, "freq", 1, mpr.Type.INT32, "Hz", None, None, None, h)
 
     while not d.ready:
         d.poll(10)
@@ -25,7 +25,7 @@ def setup(d):
     print('network ip', graph.address)
     print('network interface', graph.interface)
 
-    d.set_properties({"testInt":5, "testFloat":12.7, "testString":["test",b"foo"],
+    d.set_properties({"testInt":5, "testFloat":12.7, "testString":["test","foo"],
                       "removed1":"shouldn't see this"})
     d['testInt'] = 7
 #    d.set_properties({"removed1":None, "removed2":"test"})
@@ -54,61 +54,69 @@ def setup(d):
 
     print('signal properties:', sig.properties)
 
-    d.add_signal(mpr.DIR_IN, "insig", 4, mpr.INT32, None, None, None, None, h)
-    d.add_signal(mpr.DIR_OUT, "outsig", 4, mpr.FLT)
+    sig = d.add_signal(mpr.Direction.INCOMING, "insig", 4, mpr.Type.INT32, None, None, None, None, h)
+    print('signal properties:', sig.properties)
+    sig = d.add_signal(mpr.Direction.OUTGOING, "outsig", 4, mpr.Type.FLOAT)
+    print('signal properties:', sig.properties)
+
+#    # try adding a signal with the same name
+#    sig = d.add_signal(mpr.Direction.INCOMING, "outsig", 4, mpr.Type.FLOAT)
+
     print('setup done!')
 
 #check libmapper version
-print('using libmapper version', mpr.version)
-dev1 = mpr.device("py.test1")
+#print('using libmapper version', mpr.version)
+dev1 = mpr.Device("py.test1")
 setup(dev1)
-dev2 = mpr.device("py.test2")
+dev2 = mpr.Device("py.test2")
 setup(dev2)
 
 def object_name(type):
-    if type is mpr.DEV:
+    if type is mpr.Type.DEVICE:
         return 'DEVICE'
-    elif type is mpr.SIG:
+    elif type is mpr.Type.SIGNAL:
         return 'SIGNAL'
-    elif type is mpr.MAP:
+    elif type is mpr.Type.MAP:
         return 'MAP'
 
-def graph_cb(type, object, action):
-    print(object_name(type),["ADDED", "MODIFIED", "REMOVED", "EXPIRED"][action])
-    if type is mpr.DEV or type is mpr.SIG:
+def graph_cb(type, object, event):
+    print(event.name)
+    if type is mpr.Type.DEVICE or type is mpr.Type.SIGNAL:
         print('  ', object['name'])
-    elif type is mpr.MAP:
-        for s in object.signals(mpr.LOC_SRC):
+    elif type is mpr.Type.MAP:
+        for s in object.signals(mpr.Location.SOURCE):
             print("  src: ", s.device()['name'], ':', s['name'])
-        for s in object.signals(mpr.LOC_DST):
+        for s in object.signals(mpr.Location.DESTINATION):
             print("  dst: ", s.device()['name'], ':', s['name'])
 
-g = mpr.graph(mpr.OBJ)
-
+g = mpr.Graph(mpr.Type.OBJECT)
 g.add_callback(graph_cb)
-
-while not dev1.ready or not dev2.ready:
-    dev1.poll(10)
-    dev2.poll(10)
-    g.poll()
 
 start.now()
 
+for s in dev1.signals():
+    print("    ", s['name'])
+
 outsig = dev1.signals().filter("name", "outsig").next()
-insig = dev2.signals().filter("name", "insig").next()
-for i in range(1000):
+
+for s in dev2.signals():
+    print("    ", s['name'])
+
+insig = dev2.signals().filter("name", "*insig").next()
+
+for i in range(100):
     dev1.poll(10)
     dev2.poll(10)
     g.poll()
     outsig.set_value([i+1,i+2,i+3,i+4])
 
-    if i==250:
-        map = mpr.map(outsig, insig)
+    if i==0:
+        map = mpr.Map(outsig, insig)
         map['expr'] = 'y=y{-1}+x'
         map.push()
 
 #        # test creating multi-source map
-#        map = mpr.map([sig1, sig2], sig3)
+#        map = mpr.Map([sig1, sig2], sig3)
 #        map.expr = 'y=x0-x1'
 #        map.push()
 
@@ -120,21 +128,25 @@ for i in range(1000):
     if i==800:
         map.release()
 
-ndevs = g.devices().length()
-nsigs = g.signals().length()
-print(ndevs, 'device' if ndevs is 1 else 'devices', 'and', nsigs, 'signal:' if nsigs is 1 else 'signals:')
+
+print("GRAPH:")
+g.print()
+
+ndevs = len(g.devices())
+nsigs = len(g.signals())
+print(ndevs, 'device' if ndevs == 1 else 'devices', 'and', nsigs, 'signal:' if nsigs == 1 else 'signals:')
 for d in g.devices():
-    print("  ", d['name'], '(synced', mpr.time().get_double() - d['synced'].get_double(), 'seconds ago)')
+    print("  DEVICE:", d['name'], '(synced', mpr.Time().get_double() - d['synced'].get_double(), 'seconds ago)')
     for s in d.signals():
-        print("    ", s['name'])
+        print("    SIGNAL:", s['name'])
 
 maps = g.maps()
-nmaps = maps.length()
-print(nmaps, 'map:' if nmaps is 1 else 'maps:')
+nmaps = len(maps)
+print(nmaps, 'map:' if nmaps == 1 else 'maps:')
 for m in g.maps():
-    for s in m.signals(mpr.LOC_SRC):
+    for s in m.signals(mpr.Location.SOURCE):
         print("  src: ", s.device()['name'], ':', s['name'])
-    for s in m.signals(mpr.LOC_DST):
+    for s in m.signals(mpr.Location.DESTINATION):
         print("  dst: ", s.device()['name'], ':', s['name'])
 
 # combining queries
@@ -144,9 +156,13 @@ q1.join(g.signals().filter("name", "*req"))
 for i in q1:
     print("    ", i['name'])
 
-tt1 = mpr.time(0.5)
-tt2 = mpr.time(2.5)
+tt1 = mpr.Time(0.5)
+tt2 = mpr.Time(2.5)
+tt3 = mpr.Time(2.5)
+print("tt1 != tt2") if tt1 != tt2 else print("timetag error")
+print("tt1 < tt2") if tt1 < tt2 else print("timetag error")
+print("tt2 == tt3") if tt2 == tt3 else print("timetag error")
 tt3 = tt1 + 0.5
 print('got tt: ', tt3.get_double())
 print(1.6 + tt1)
-print('current time:', mpr.time().get_double())
+print('current time:', mpr.Time().get_double())

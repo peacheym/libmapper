@@ -99,8 +99,10 @@ namespace mapper {
     /*! Symbolic identifiers for core object properties. */
     enum class Property
     {
+        BUNDLE              = MPR_PROP_BUNDLE,
         DEVICE              = MPR_PROP_DEV,
         DIRECTION           = MPR_PROP_DIR,
+        EPHEMERAL           = MPR_PROP_EPHEM,
         EXPRESSION          = MPR_PROP_EXPR,
         HOST                = MPR_PROP_HOST,
         ID                  = MPR_PROP_ID,
@@ -126,7 +128,8 @@ namespace mapper {
         PROTOCOL            = MPR_PROP_PROTOCOL,
         RATE                = MPR_PROP_RATE,
         SCOPE               = MPR_PROP_SCOPE,
-        SIGNALS             = MPR_PROP_SIG,
+        SIGNAL              = MPR_PROP_SIG,
+        /* MPR_PROP_SLOT DELIBERATELY OMITTED */
         STATUS              = MPR_PROP_STATUS,
         STEAL_MODE          = MPR_PROP_STEAL_MODE,
         SYNCED              = MPR_PROP_SYNCED,
@@ -231,9 +234,19 @@ namespace mapper {
 
         List(mpr_list list)
             { _list = list; }
-        /* override copy constructor */
+        /* Copy constructor */
         List(const List& orig)
             { _list = mpr_list_get_cpy(orig._list); }
+        /* Move constructor */
+        List(List&& orig) noexcept
+            { _list = orig._list; orig._list = NULL; }
+        /* Copy assignment operator */
+        List& operator=(const List& orig) noexcept
+            { _list = mpr_list_get_cpy(orig._list); return *this; }
+        /* Move assignment operator */
+        List& operator=(List&& orig) noexcept
+            { _list = orig._list; orig._list = NULL; return *this; }
+
         ~List()
             { mpr_list_free(_list); }
 
@@ -626,11 +639,6 @@ namespace mapper {
          *  \return         True if map is completely initialized. */
         bool ready() const
             { return mpr_map_get_is_ready(_obj); }
-
-//        /*! Get the scopes property for a this map.
-//         *  \return       A List containing the list of results.  Use List::next() to iterate. */
-//        List<Device> scopes() const
-//            { return List<Device>((void**)mpr_map_scopes(_obj)); }
 
         /*! Add a scope to this Map. Map scopes configure the propagation of Signal updates across
          *  the Map. Changes will not take effect until synchronized with the distributed graph
@@ -1049,6 +1057,20 @@ namespace mapper {
      *  network, usually sent from an external GUI. */
     class Device : public Object
     {
+    private:
+        void maybe_free() {
+            if (_owned && _obj && decr_refcount() <= 0) {
+                mpr_list sigs = mpr_dev_get_sigs(_obj, MPR_DIR_ANY);
+                while (sigs) {
+                    const void *data = mpr_obj_get_prop_as_ptr((mpr_sig)*sigs, MPR_PROP_DATA, NULL);
+                    if (data)
+                        free((void*)data);
+                    sigs = mpr_list_get_next(sigs);
+                }
+                mpr_dev_free(_obj);
+                free(_refcount_ptr);
+            }
+        }
     public:
         Device() : Object() {}
         /*! Allocate and initialize a Device.
@@ -1069,29 +1091,49 @@ namespace mapper {
             _refcount_ptr = (int*)malloc(sizeof(int));
             *_refcount_ptr = 1;
         }
-        Device(const Device& orig) : Object(orig)
+        /* Copy constructor */
+        Device(const Device& orig) : Object(orig._obj)
         {
             _owned = orig._owned;
             _refcount_ptr = orig._refcount_ptr;
             if (_owned)
                 incr_refcount();
         }
+        /* Move constructor */
+        Device(Device&& orig) noexcept : Object(orig._obj)
+        {
+            _owned = orig._owned;
+            _refcount_ptr = orig._refcount_ptr;
+            orig._obj = NULL;
+            orig._owned = 0;
+            /* do not modify refcount */
+        }
+        /* Copy assignment operator */
+        Device& operator=(const Device& orig) noexcept
+        {
+            maybe_free();
+            _obj = orig._obj;
+            _owned = orig._owned;
+            _refcount_ptr = orig._refcount_ptr;
+            if (_owned)
+                incr_refcount();
+            return *this;
+        }
+        /* Move assignment operator */
+        Device& operator=(Device&& orig) noexcept
+        {
+            maybe_free();
+            _obj = orig._obj;
+            _owned = orig._owned;
+            _refcount_ptr = orig._refcount_ptr;
+            orig._obj = 0;
+            orig._owned = 0;
+            return *this;
+        }
         Device(mpr_dev dev) : Object(dev)
             { _owned = false; }
         ~Device()
-        {
-            if (_owned && _obj && decr_refcount() <= 0) {
-                mpr_list sigs = mpr_dev_get_sigs(_obj, MPR_DIR_ANY);
-                while (sigs) {
-                    const void *data = mpr_obj_get_prop_as_ptr((mpr_sig)*sigs, MPR_PROP_DATA, NULL);
-                    if (data)
-                        free((void*)data);
-                    sigs = mpr_list_get_next(sigs);
-                }
-                mpr_dev_free(_obj);
-                free(_refcount_ptr);
-            }
-        }
+            { maybe_free(); }
         operator mpr_dev() const
             { return _obj; }
 
@@ -1144,9 +1186,20 @@ namespace mapper {
         /*! Poll this device for new messages.  Note, if you have multiple devices, the right thing
          *  to do is call this function for each of them with block_ms=0, and add your own sleep if
          *  necessary.
-         *  \return     The number of handled messages. May be zero if there was nothing to do. */
+         *  \param block_ms     The number of milliseconds to block, or 0 for non-blocking behavior.
+         *  \return             The number of handled messages. */
         int poll(int block_ms=0) const
             { return mpr_dev_poll(_obj, block_ms); }
+
+        /*! Start automatically polling this Device for new messages in a separate thread.
+         *  \return   Self. */
+        Device& start()
+            { mpr_dev_start_polling(_obj); RETURN_SELF }
+
+        /*! Stop automatically polling this Device for new messages in a separate thread.
+         *  \return   Self. */
+        Device& stop()
+            { mpr_dev_stop_polling(_obj); RETURN_SELF }
 
         /*! Detect whether a device is completely initialized.
          *  \return         Non-zero if device is completely initialized, i.e., has an allocated
@@ -1162,14 +1215,15 @@ namespace mapper {
         /*! Set the time for a device. Use only if user code has access to a more accurate
          *  timestamp than the operating system.
          *  \param time     The time to set. This time will be used for tagging signal updates until
-         *                  the next occurrence mpr_dev_set_time() or mpr_dev_poll(). */
+         *                  the next occurrence mpr_dev_set_time() or mpr_dev_poll().
+         *  \return   Self. */
         Device& set_time(Time time)
             { mpr_dev_set_time(_obj, *time); RETURN_SELF }
 
         /*! Indicate that all signal values have been updated for a given timestep. This function
          *  can be omitted if poll() is called each sampling timestep, however calling poll() at a
          *  lower rate may be more performant.
-         *  \param return   Self. */
+         *  \return   Self. */
         Device& update_maps()
             { mpr_dev_update_maps(_obj); RETURN_SELF }
 
@@ -1272,6 +1326,12 @@ namespace mapper {
             data->handler.map = h;
             return MPR_MAP;
         }
+        void maybe_free() {
+            if (_owned && _obj && decr_refcount() <= 0) {
+                mpr_graph_free(_obj);
+                free(_refcount_ptr);
+            }
+        }
     public:
         /*! Create a peer in the libmapper distributed graph.
          *  \param types    Sets whether the graph should automatically subscribe to information
@@ -1284,13 +1344,43 @@ namespace mapper {
             _refcount_ptr = (int*)malloc(sizeof(int));
             *_refcount_ptr = 1;
         }
-        Graph(const Graph& orig)
+        Graph(const Graph& orig) : Object(orig._obj)
         {
+            _owned = orig._owned;
+            _refcount_ptr = orig._refcount_ptr;
+            if (_owned)
+                incr_refcount();
+        }
+        /* Move constructor */
+        Graph(Graph&& orig) noexcept : Object(orig._obj)
+        {
+            _owned = orig._owned;
+            _refcount_ptr = orig._refcount_ptr;
+            orig._obj = NULL;
+            orig._owned = 0;
+            /* do not modify refcount */
+        }
+        /* Copy assignment operator */
+        Graph& operator=(const Graph& orig) noexcept
+        {
+            maybe_free();
             _obj = orig._obj;
             _owned = orig._owned;
             _refcount_ptr = orig._refcount_ptr;
             if (_owned)
                 incr_refcount();
+            return *this;
+        }
+        /* Move assignment operator */
+        Graph& operator=(Graph&& orig) noexcept
+        {
+            maybe_free();
+            _obj = orig._obj;
+            _owned = orig._owned;
+            _refcount_ptr = orig._refcount_ptr;
+            orig._obj = 0;
+            orig._owned = 0;
+            return *this;
         }
         Graph(mpr_graph graph)
         {
@@ -1299,12 +1389,7 @@ namespace mapper {
             _refcount_ptr = 0;
         }
         ~Graph()
-        {
-            if (_owned && _obj && decr_refcount() <= 0) {
-                mpr_graph_free(_obj);
-                free(_refcount_ptr);
-            }
-        }
+            { maybe_free(); }
         operator mpr_graph() const
             { return _obj; }
 
@@ -1334,11 +1419,21 @@ namespace mapper {
         std::string address() const
             { return std::string(mpr_graph_get_address(_obj)); }
 
-        /*! Update a Graph.
+        /*! Synchonize a Graph object with the distributed graph.
          *  \param block_ms     The number of milliseconds to block, or 0 for non-blocking behavior.
          *  \return             The number of handled messages. */
         int poll(int block_ms=0) const
             { return mpr_graph_poll(_obj, block_ms); }
+
+        /*! Start automatically synchonizing a Graph object in a separate thread.
+         *  \return   Self. */
+        Graph& start()
+            { mpr_graph_start_polling(_obj); RETURN_SELF }
+
+        /*! Stop automatically synchonizing a Graph object in a separate thread.
+         *  \return   Self. */
+        Graph& stop()
+            { mpr_graph_stop_polling(_obj); RETURN_SELF }
 
         // subscriptions
         /*! Subscribe to information about a specific Device.
@@ -1404,15 +1499,15 @@ namespace mapper {
 
         // graph devices
         List<Device> devices() const
-            { return List<Device>(mpr_graph_get_objs(_obj, MPR_DEV)); }
+            { return List<Device>(mpr_graph_get_list(_obj, MPR_DEV)); }
 
         // graph signals
         List<Signal> signals() const
-            { return List<Signal>(mpr_graph_get_objs(_obj, MPR_SIG)); }
+            { return List<Signal>(mpr_graph_get_list(_obj, MPR_SIG)); }
 
         // graph maps
         List<Map> maps() const
-            { return List<Map>(mpr_graph_get_objs(_obj, MPR_MAP)); }
+            { return List<Map>(mpr_graph_get_list(_obj, MPR_MAP)); }
 
         OBJ_METHODS(Graph);
     };

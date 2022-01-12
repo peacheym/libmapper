@@ -183,7 +183,7 @@ int check_result(mpr_type *types, int len, const void *val, int pos, int check)
             {
                 float *pf = (float*)val;
                 eprintf("%g, ", pf[i + offset]);
-                if (check && pf[i + offset] != expect_flt[i])
+                if (check && pf[i + offset] != expect_flt[i] && expect_flt[i] == expect_flt[i])
                     error = i;
                 break;
             }
@@ -191,7 +191,7 @@ int check_result(mpr_type *types, int len, const void *val, int pos, int check)
             {
                 double *pd = (double*)val;
                 eprintf("%g, ", pd[i + offset]);
-                if (check && pd[i + offset] != expect_dbl[i])
+                if (check && pd[i + offset] != expect_dbl[i] && expect_dbl[i] == expect_dbl[i])
                     error = i;
                 break;
             }
@@ -304,8 +304,9 @@ int parse_and_eval(int expectation, int max_tokens, int check, int exp_updates)
     /* reallocate variable value histories */
     for (i = 0; i < e->n_vars; i++) {
         int vlen = mpr_expr_get_var_vec_len(e, i);
+        mpr_type type = mpr_expr_get_var_type(e, i);
         mpr_value_reset_inst(&user_vars[i], 0);
-        mpr_value_realloc(&user_vars[i], vlen, MPR_DBL, 1, 1, 0);
+        mpr_value_realloc(&user_vars[i], vlen, type, 1, 1, 0);
     }
     user_vars_p = user_vars;
 
@@ -792,7 +793,7 @@ int run_tests()
         return 1;
 
     /* 49) Multiple Inputs */
-    snprintf(str, 256, "y=x+x1[1:2]+x2");
+    snprintf(str, 256, "y=x+x$1[1:2]+x$2");
     setup_test_multisource(3, types, lens, MPR_FLT, 2);
     expect_flt[0] = (float)((double)src_int[0] + (double)src_flt[1] + src_dbl[0]);
     expect_flt[1] = (float)((double)src_int[1] + (double)src_flt[2] + src_dbl[1]);
@@ -958,7 +959,7 @@ int run_tests()
         return 1;
 
     /* 63) Buddy logic */
-    snprintf(str, 256, "alive=(t_x0>t_y{-1})&&(t_x1>t_y{-1});y=x0+x1[1:2];");
+    snprintf(str, 256, "alive=(t_x$0>t_y{-1})&&(t_x$1>t_y{-1});y=x$0+x$1[1:2];");
     /* types[] and lens[] are already defined */
     setup_test_multisource(2, types, lens, MPR_FLT, 2);
     expect_flt[0] = src_int[0] + src_flt[1];
@@ -991,14 +992,14 @@ int run_tests()
         return 1;
 
     /* 68) Pooled instance functions: any() and all() */
-    snprintf(str, 256, "y=(x-1).instances().any() + (x+1).instances().all();");
+    snprintf(str, 256, "y=(x-1).instance.any() + (x+1).instance.all();");
     setup_test(MPR_INT32, 1, MPR_INT32, 1);
     expect_int[0] = 2;
     if (parse_and_eval(EXPECT_SUCCESS, 0, 1, iterations))
         return 1;
 
     /* 69) Pooled instance functions: sum(), count() and mean() */
-    snprintf(str, 256, "y=(x.instances().sum()/x.instances().count())==x.instances().mean();");
+    snprintf(str, 256, "y=(x.instance.sum()/x.instance.count())==x.instance.mean();");
     setup_test(MPR_INT32, 3, MPR_INT32, 3);
     expect_int[0] = 1;
     expect_int[1] = 1;
@@ -1007,14 +1008,14 @@ int run_tests()
         return 1;
 
     /* 70) Pooled instance functions: max(), min(), and size() */
-    snprintf(str, 256, "y=(x.instances().max()-x.instances().min())==x.instances().size();");
+    snprintf(str, 256, "y=(x.instance.max()-x.instance.min())==x.instance.size();");
     setup_test(MPR_INT32, 1, MPR_INT32, 1);
     expect_int[0] = 1;
     if (parse_and_eval(EXPECT_SUCCESS, 0, 1, iterations))
         return 1;
 
     /* 71) Pooled instance function: center() */
-    snprintf(str, 256, "y=x.instances().center()==(x.instances().max()+x.instances().min())*0.5;");
+    snprintf(str, 256, "y=x.instance.center()==(x.instance.max()+x.instance.min())*0.5;");
     setup_test(MPR_INT32, 2, MPR_INT32, 2);
     expect_int[0] = 1;
     expect_int[1] = 1;
@@ -1022,19 +1023,19 @@ int run_tests()
         return 1;
 
     /* 72) Pooled instance mean length of centered vectors */
-    snprintf(str, 256, "m=x.instances().mean(); y=(x-m).norm().instances().mean()");
+    snprintf(str, 256, "m=x.instance.mean(); y=(x-m).norm().instance.mean()");
     setup_test(MPR_FLT, 2, MPR_FLT, 1);
     if (parse_and_eval(EXPECT_SUCCESS, 0, 0, iterations))
         return 1;
 
     /* 73) Pooled instance mean linear displacement */
-    snprintf(str, 256, "y=(x-x{-1}).instances().mean()");
+    snprintf(str, 256, "y=(x-x{-1}).instance.mean()");
     setup_test(MPR_INT32, 1, MPR_INT32, 1);
     if (parse_and_eval(EXPECT_SUCCESS, 0, 0, iterations-1))
         return 1;
 
     /* 74) Dot product of two vectors */
-    snprintf(str, 256, "y=dot(x, x1);");
+    snprintf(str, 256, "y=dot(x, x$1);");
     lens[0] = 3;
     setup_test_multisource(2, types, lens, MPR_FLT, 1);
     expect_flt[0] = src_int[0] * src_flt[0] + src_int[1] * src_flt[1] + src_int[2] * src_flt[2];
@@ -1049,9 +1050,9 @@ int run_tests()
         return 1;
 
     /* 76) Pooled instance mean angular displacement */
-    snprintf(str, 256, "c0{-1}=x.instances().center();"
-                       "c1=x.instances().center();"
-                       "y=angle(x{-1}-c0,x-c1).instances().mean();"
+    snprintf(str, 256, "c0{-1}=x.instance.center();"
+                       "c1=x.instance.center();"
+                       "y=angle(x{-1}-c0,x-c1).instance.mean();"
                        "c0=c1;");
     setup_test(MPR_FLT, 2, MPR_FLT, 1);
     expect_flt[0] = 0.f;
@@ -1084,11 +1085,264 @@ int run_tests()
         return 1;
 
     /* 80) Just instance count */
-    snprintf(str, 256, "y=x.instances().count();");
+    snprintf(str, 256, "y=x.instance.count();");
     setup_test(MPR_FLT, 3, MPR_FLT, 2);
     expect_flt[0] = 1;
     expect_flt[1] = 1;
     if (parse_and_eval(EXPECT_SUCCESS, 2, 1, iterations))
+        return 1;
+
+    /* 81) instance.reduce() */
+    snprintf(str, 256, "y=x.instance.reduce(a, b -> a[1:2] + b);");
+    setup_test(MPR_FLT, 3, MPR_FLT, 1);
+    expect_flt[0] = src_flt[1];
+    expect_flt[1] = src_flt[2];
+    if (parse_and_eval(EXPECT_SUCCESS, 9, 1, iterations))
+        return 1;
+
+    /* 82) Reducing a constant - syntax error */
+    snprintf(str, 256, "y=(1*0).instance.mean();");
+    setup_test(MPR_FLT, 3, MPR_FLT, 2);
+    expect_flt[0] = 1;
+    expect_flt[1] = 1;
+    if (parse_and_eval(EXPECT_FAILURE, 0, 1, iterations))
+        return 1;
+
+    /* 83) Reducing a user variable */
+    snprintf(str, 256, "n=(x-100);y=n.vector.sum();");
+    setup_test(MPR_FLT, 3, MPR_FLT, 2);
+    expect_flt[0] = src_flt[0] - 100 + src_flt[1] - 100 + src_flt[2] - 100;
+    expect_flt[1] = expect_flt[0];
+    if (parse_and_eval(EXPECT_SUCCESS, 0, 1, iterations))
+        return 1;
+
+    /* 84) History mean() - windowed running mean */
+    snprintf(str, 256, "y=x.history(5).mean();");
+    setup_test(MPR_FLT, 3, MPR_FLT, 2);
+    expect_flt[0] = expect_flt[1] = 0.f;
+    for (i = 0; i < iterations && i < 5; i++) {
+        expect_flt[0] += src_flt[0];
+        expect_flt[1] += src_flt[1];
+    }
+    expect_flt[0] /= 5.f;
+    expect_flt[1] /= 5.f;
+    if (parse_and_eval(EXPECT_SUCCESS, 0, 1, iterations))
+        return 1;
+
+    /* 85) Reducing a user variable over history */
+    snprintf(str, 256, "n=(x-100);y=n.history(5).mean();");
+    setup_test(MPR_FLT, 3, MPR_FLT, 2);
+    expect_flt[0] = src_flt[0] - 100;
+    expect_flt[1] = src_flt[1] - 100;
+    if (parse_and_eval(EXPECT_FAILURE, 0, 1, iterations))
+        return 1;
+
+    /* 86) history.reduce() with accumulator initialisation */
+    snprintf(str, 256, "y=x.history(5).reduce(x, a = 100 -> x + a);");
+    setup_test(MPR_FLT, 3, MPR_FLT, 2);
+    expect_flt[0] = expect_flt[1] = 100;
+    for (i = 0; i < iterations && i < 5; i++) {
+        expect_flt[0] += src_flt[0];
+        expect_flt[1] += src_flt[1];
+    }
+    if (parse_and_eval(EXPECT_SUCCESS, 9, 1, iterations))
+        return 1;
+
+    /* 87) vector.mean() */
+    snprintf(str, 256, "y=x.vector.mean();");
+    setup_test(MPR_FLT, 3, MPR_FLT, 2);
+    expect_flt[0] = (src_flt[0] + src_flt[1] + src_flt[2]) / 3;
+    expect_flt[1] = expect_flt[0];
+    if (parse_and_eval(EXPECT_SUCCESS, 0, 1, iterations))
+        return 1;
+
+    /* 88) vector.reduce() */
+    snprintf(str, 256, "y=x.vector.reduce(x,a -> x+a);");
+    setup_test(MPR_FLT, 3, MPR_FLT, 2);
+    expect_flt[0] = src_flt[0] + src_flt[1] + src_flt[2];
+    expect_flt[1] = expect_flt[0];
+    if (parse_and_eval(EXPECT_SUCCESS, 0, 1, iterations))
+        return 1;
+
+    /* 89) signal.mean() */
+    snprintf(str, 256, "y=x.signal.mean();");
+    types[0] = MPR_INT32;
+    types[1] = MPR_FLT;
+    types[2] = MPR_DBL;
+    lens[0] = 2;
+    lens[1] = 3;
+    lens[2] = 1;
+    setup_test_multisource(3, types, lens, MPR_FLT, 2);
+    expect_flt[0] = (float)(((double)src_int[0] + (double)src_flt[0] + src_dbl[0]) / 3.);
+    expect_flt[1] = (float)(((double)src_int[1] + (double)src_flt[1] + src_dbl[0]) / 3.);
+    if (parse_and_eval(EXPECT_SUCCESS, 0, 1, iterations))
+        return 1;
+
+    /* 90) signal.reduce() */
+    snprintf(str, 256, "y=x.signal.reduce(x,a->x+a);");
+    types[0] = MPR_INT32;
+    types[1] = MPR_FLT;
+    types[2] = MPR_DBL;
+    lens[0] = 2;
+    lens[1] = 3;
+    lens[2] = 1;
+    setup_test_multisource(3, types, lens, MPR_FLT, 2);
+    expect_flt[0] = (float)((double)src_int[0] + (double)src_flt[0] + src_dbl[0]);
+    expect_flt[1] = (float)((double)src_int[1] + (double)src_flt[1] + src_dbl[0]);
+    if (parse_and_eval(EXPECT_SUCCESS, 0, 1, iterations))
+        return 1;
+
+    /* 91) nested reduce(): sum of last 3 samples of all input signals with extra input reference */
+    snprintf(str, 256, "y=(x+1).signal.reduce(a,b->b+a.history(3).reduce(c,d->c+d)+a);");
+    types[0] = MPR_INT32;
+    types[1] = MPR_FLT;
+    types[2] = MPR_DBL;
+    lens[0] = 2;
+    lens[1] = 3;
+    lens[2] = 1;
+    setup_test_multisource(3, types, lens, MPR_FLT, 1);
+    expect_flt[0] = (float)(((double)src_int[0] + (double)src_flt[0] + src_dbl[0] + 3.0) * 4.0);
+    if (parse_and_eval(EXPECT_SUCCESS, 0, 1, iterations))
+        return 1;
+
+    /* 92) mean() nested with reduce() using sequential dot syntax - not currently allowed */
+    snprintf(str, 256, "y=x.vector.reduce(x, a -> x + a).signal.mean();");
+    types[0] = MPR_INT32;
+    types[1] = MPR_FLT;
+    types[2] = MPR_DBL;
+    lens[0] = 2;
+    lens[1] = 3;
+    lens[2] = 1;
+    setup_test_multisource(3, types, lens, MPR_FLT, 1);
+    if (parse_and_eval(EXPECT_FAILURE, 0, 1, iterations))
+        return 1;
+
+    /* 93) vector.reduce() on specific signal */
+    snprintf(str, 256, "y=x$1.vector.reduce(x,a -> x+a);");
+    types[0] = MPR_INT32;
+    types[1] = MPR_FLT;
+    types[2] = MPR_DBL;
+    lens[0] = 2;
+    lens[1] = 3;
+    lens[2] = 1;
+    setup_test_multisource(3, types, lens, MPR_FLT, 1);
+    expect_flt[0] = src_flt[0] + src_flt[1] + src_flt[2];
+    if (parse_and_eval(EXPECT_SUCCESS, 0, 1, iterations))
+        return 1;
+
+    /* 94) instance.count() on specific signal */
+    snprintf(str, 256, "y=x$1.instance.count();");
+    types[0] = MPR_INT32;
+    types[1] = MPR_FLT;
+    types[2] = MPR_DBL;
+    lens[0] = 2;
+    lens[1] = 3;
+    lens[2] = 1;
+    setup_test_multisource(3, types, lens, MPR_FLT, 1);
+    expect_flt[0] = 1;
+    if (parse_and_eval(EXPECT_SUCCESS, 0, 1, iterations))
+        return 1;
+
+    /* 95) vector.reduce() with vector subset */
+    snprintf(str, 256, "y=x[1:2].vector.reduce(x,a -> x+a);");
+    setup_test(MPR_FLT, 3, MPR_FLT, 2);
+    expect_flt[0] = src_flt[1] + src_flt[2];
+    expect_flt[1] = expect_flt[0];
+    if (parse_and_eval(EXPECT_SUCCESS, 0, 1, iterations))
+        return 1;
+
+    /* 96) signal reduce() nested with instance count() */
+    snprintf(str, 256, "y=x.signal.reduce(x, a -> x.instance.count() + a);");
+    types[0] = MPR_INT32;
+    types[1] = MPR_FLT;
+    types[2] = MPR_DBL;
+    lens[0] = 2;
+    lens[1] = 3;
+    lens[2] = 1;
+    setup_test_multisource(3, types, lens, MPR_FLT, 1);
+    expect_flt[0] = 3;
+    if (parse_and_eval(EXPECT_SUCCESS, 0, 1, iterations))
+        return 1;
+
+    /* 97) signal reduce() nested with instance mean() */
+    snprintf(str, 256, "y=x.signal.reduce(x, a -> x.instance.mean() + a);");
+    types[0] = MPR_INT32;
+    types[1] = MPR_FLT;
+    types[2] = MPR_DBL;
+    lens[0] = 2;
+    lens[1] = 3;
+    lens[2] = 1;
+    setup_test_multisource(3, types, lens, MPR_FLT, 1);
+    expect_flt[0] = (float)((double)src_int[0] + (double)src_flt[0] + src_dbl[0]);
+    if (parse_and_eval(EXPECT_SUCCESS, 0, 1, iterations))
+        return 1;
+
+    /* 98) nested reduce() of same type */
+    snprintf(str, 256, "y=x.signal.reduce(a, b -> a.signal.reduce(c, d -> c + d) + b);");
+    types[0] = MPR_INT32;
+    types[1] = MPR_FLT;
+    types[2] = MPR_DBL;
+    lens[0] = 1;
+    lens[1] = 3;
+    lens[2] = 2;
+    setup_test_multisource(3, types, lens, MPR_FLT, 3);
+    if (parse_and_eval(EXPECT_FAILURE, 0, 1, iterations))
+        return 1;
+
+    /* 99) nested reduce(): sum of all vector elements of all input signals */
+    /* TODO: need to modify tokens to allow variable vector length (per signal) */
+    snprintf(str, 256, "y=x.signal.reduce(a, b -> a.vector.reduce(c, d -> c + d) + b);");
+    types[0] = MPR_INT32;
+    types[1] = MPR_FLT;
+    types[2] = MPR_DBL;
+    lens[0] = 2;
+    lens[1] = 3;
+    lens[2] = 1;
+    setup_test_multisource(3, types, lens, MPR_FLT, 1);
+    expect_flt[0] = (  (double)src_int[0] + (double)src_int[1]
+                     + (double)src_flt[0] + (double)src_flt[1] + (double)src_flt[2]
+                     + src_dbl[0]);
+    if (parse_and_eval(EXPECT_SUCCESS, 0, 1, iterations))
+        return 1;
+
+    /* 100) reduce() nested with mean() */
+    snprintf(str, 256, "y=x.signal.reduce(x, aLongerName -> x.vector.mean() + aLongerName);");
+    types[0] = MPR_INT32;
+    types[1] = MPR_FLT;
+    types[2] = MPR_DBL;
+    lens[0] = 3;
+    lens[1] = 2;
+    lens[2] = 2;
+    setup_test_multisource(3, types, lens, MPR_FLT, 1);
+    expect_flt[0] = (  ((double)src_int[0] + (double)src_int[1] + (double)src_int[2]) / 3.
+                     + ((double)src_flt[0] + (double)src_flt[1]) / 2.
+                     + (src_dbl[0] + src_dbl[1]) / 2.);
+    if (parse_and_eval(EXPECT_SUCCESS, 0, 1, iterations))
+        return 1;
+
+    /* 101) reduce() nested with mean(), accum ref before input ref */
+    snprintf(str, 256, "y=x.signal.reduce(x, a -> a - x.vector.mean());");
+    types[0] = MPR_INT32;
+    types[1] = MPR_FLT;
+    types[2] = MPR_DBL;
+    lens[0] = 2;
+    lens[1] = 3;
+    lens[2] = 1;
+    setup_test_multisource(3, types, lens, MPR_FLT, 1);
+    expect_flt[0] = (  ((double)src_int[0] + (double)src_int[1]) / 2.
+                     + ((double)src_flt[0] + (double)src_flt[1] + (double)src_flt[2]) / 3.
+                     + src_dbl[0]) * -1.;
+    if (parse_and_eval(EXPECT_SUCCESS, 0, 1, iterations))
+        return 1;
+
+    /* 102) misplaced commas */
+    snprintf(str, 256, "y=(0.00417,0.00719*x$0+0.0025*x$1+0,0)*[990,750]/2");
+    types[0] = MPR_INT32;
+    types[1] = MPR_FLT;
+    lens[0] = 2;
+    lens[1] = 3;
+    setup_test_multisource(2, types, lens, MPR_FLT, 1);
+    if (parse_and_eval(EXPECT_FAILURE, 0, 1, iterations))
         return 1;
 
     return 0;

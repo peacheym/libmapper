@@ -1,16 +1,10 @@
-Note: This is an on-going document to describe the set-up procedure
-for compiling libmapper under windows. It is not done yet, sorry.  If
-you use Windows, please feel free to help.
-
-How to compile libmapper on Microsoft Windows
-=============================================
+# Cross-compiling libmapper for Microsoft Windows using MinGW
 
 Since libmapper uses open source tools for its build system, the
 following instructions must be followed to set up a development
 environment on a Microsoft Windows operating system:
 
-Install MinGW
--------------
+## Install MinGW
 
 Download and install [MinGW](http://sourceforge.net/projects/mingw/). Also install the following packages:
 
@@ -27,8 +21,7 @@ Download and install [MinGW](http://sourceforge.net/projects/mingw/). Also insta
 The following instructions will assume you installed MinGW in the folder `C:\MinGW`
 
 
-Install pkg-config and glib
------------------------
+## Install pkg-config and glib
 
 * Download [pkg-config](http://ftp.gnome.org/pub/gnome/binaries/win32/dependencies/pkg-config_0.26-1_win32.zip)
 * Extract the file `bin/pkg-config.exe` and move it to the folder `C:\MinGW\bin`
@@ -38,14 +31,12 @@ Install pkg-config and glib
 * Extract the file `lib/libglib-2.0-0.dll` and move it to the folder `C:\MinGW\bin`
 
 
-Update libtool
---------------
+## Update libtool
 
 MinGW currently includes libtool version 2.4, but we need version 2.4.2. Download and install [libtool 2.4.2](http://mirror-fr2.bbln.org/gnu/libtool/libtool-2.4.2.tar.gz)
 
 
-Install Python
---------------
+## Install Python
 
 Download and install [python](https://www.python.org/downloads/). Subsequent instructions will assumre that Python is installed in the folder `C:\Python`
 
@@ -58,8 +49,7 @@ You now have to tell Python to use the MinGW compiler when building extensions. 
     [build]
     compiler = mingw32
 
-Get source for liblo and libmapper
-----------------------------------
+## Get source for liblo and libmapper
 
 * Download and install [liblo](https://github.com/radarsat1/liblo). Warning: if you download the 0.28 release code instead of from the git repository there is a symbol missing from the file `src/liblo.def` (lo_server_enable_queue)
 * Download [libmapper](http://libmapper.github.io/downloads.html)
@@ -68,32 +58,35 @@ Edit your PKG_CONFIG_PATH:
 
     $ export PKG_CONFIG_PATH=/local/lib/pkgconfig
 
-Build and install libmapper:
+## Build and install liblo and libmapper
 
     $ ./autogen.sh
+    $ ./configure --host i586-mingw32msvc --prefix=$HOME/.win \
+        CFLAGS="-DWIN32 -D_WIN32_WINNT=0x501" \
+        LDFLAGS="-L$HOME/.win/lib" \
+        LIBS="-lws2_32 -liphlpapi -lpthread"
     $ make
     $ sudo make install
 
+For libmapper, also add the following flags:
 
-How to compile libmapper for Windows using Linux
-================================================
-
-Another way to produce the Windows build is to use MingW from a Linux
-host under a cross-compiler configuration.  Here are the arguments
-needed to tell autotools to do this:
-
-    ./configure --host i586-mingw32msvc --prefix=$HOME/.win \
-                --disable-audio --disable-jni --disable-docs \
-                CFLAGS="-DWIN32 -D_WIN32_WINNT=0x501" \
-                LDFLAGS="-L$HOME/.win/lib" \
-                LIBS="-lws2_32 -liphlpapi -lpthread"
+    --disable-examples --disable-audio --disable-jni --disable-docs
 
 As you can see, we create an install target in `$HOME/.win` to hold
 the necessary headers and libraries for the Windows build.  We also
-tell it to use the MingW32 compiler.  We disable audio and Java,
+tell it to use the MinGW32 compiler.  We disable audio and Java,
 although you can try to build Java bindings if you have the necessary
 headers and the JDK available.
 
-You should have a Windows version of Python also installed in the
-`.win` prefix, otherwise I recommend adding `--disable-swig`.
+You should have a Windows version of Python installed, and specify the
+path to it in CFLAGS, if you want to build the Python bindings,
+otherwise also provide `--disable-python`.
+
+Note that the above makes a local folder for the install location for
+Windows targets called `$HOME/.win`, which helps avoid mixing Windows
+and Linux binaries.  LibLo requires that the ["win32" port of
+pthreads][pthreadwin32] is found in your prefix location, so you
+should compile and install that before proceeding.
+
+[pthreadwin32]: http://sourceware.org/pthreads-win32
 

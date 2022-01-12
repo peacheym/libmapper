@@ -8,6 +8,10 @@
 #include "types_internal.h"
 #include <mapper/mapper.h>
 
+#ifdef _MSC_VER
+#include <malloc.h>
+#endif
+
 static int _is_map_in_scope(mpr_local_map map, mpr_id id)
 {
     int i;
@@ -202,7 +206,7 @@ void mpr_rtr_process_sig(mpr_rtr rtr, mpr_local_sig sig, int idmap_idx, const vo
 
         /* If this signal is non-instanced but the map has other instanced
          * sources we will need to update all of the active map instances. */
-        all = (!sig->use_inst && map->num_src > 1 && map->num_inst > 1);
+        all = (map->num_src > 1 && map->num_inst > sig->num_inst);
 
         if (MPR_LOC_DST == map->process_loc) {
             /* bypass map processing and bundle value without type coercion */
@@ -210,6 +214,11 @@ void mpr_rtr_process_sig(mpr_rtr rtr, mpr_local_sig sig, int idmap_idx, const vo
             memset(types, sig->type, sig->len);
             msg = mpr_map_build_msg(map, slot, val, types, sig->use_inst ? idmap : 0);
             mpr_link_add_msg(map->dst->link, map->dst->sig, msg, t, map->protocol, bundle_idx);
+            continue;
+        }
+
+        if (!map->expr) {
+            trace("error: missing expression!\n");
             continue;
         }
 
@@ -273,7 +282,7 @@ static int _store_slot(mpr_rtr_sig rs, mpr_local_slot slot)
     /* all indices occupied, allocate more */
     rs->slots = realloc(rs->slots, sizeof(mpr_local_slot) * rs->num_slots * 2);
     rs->slots[rs->num_slots] = slot;
-    for (i = rs->num_slots+1; i < rs->num_slots * 2; i++)
+    for (i = rs->num_slots + 1; i < rs->num_slots * 2; i++)
         rs->slots[i] = 0;
     i = rs->num_slots;
     rs->num_slots *= 2;
@@ -500,9 +509,7 @@ int mpr_rtr_remove_map(mpr_rtr rtr, mpr_local_map map)
                 maps[i].status |= RELEASED_REMOTELY;
                 mpr_dev_GID_decref(rtr->dev, sig->group, maps[i].map);
                 if (sig->use_inst) {
-                    int evt = (  MPR_SIG_REL_UPSTRM & sig->event_flags
-                               ? MPR_SIG_REL_UPSTRM : MPR_SIG_UPDATE);
-                    mpr_sig_call_handler(sig, evt, maps[i].map->LID, 0, 0, &t, 0);
+                    mpr_sig_call_handler(sig, MPR_SIG_REL_UPSTRM, maps[i].map->LID, 0, 0, &t, 0);
                 }
                 else {
                     mpr_dev_LID_decref(rtr->dev, sig->group, maps[i].map);

@@ -228,7 +228,7 @@ int main(int argc, char ** argv)
     Device dev("testcpp");
     if (iface)
         dev.graph().set_iface(iface);
-    std::cout << "Created device with interface " << dev.graph().iface() << std::endl;
+    out << "Created Device with interface " << dev.graph().iface() << std::endl;
 
     // make a copy of the device to check reference counting
     Device devcopy(dev);
@@ -334,6 +334,9 @@ int main(int argc, char ** argv)
     }
 
     Graph graph;
+    if (iface)
+        graph.set_iface(iface);
+    out << "Created Graph with interface " << graph.iface() << std::endl;
     Map map(dev.signals(Direction::OUTGOING)[0], dev.signals(Direction::INCOMING)[1]);
     map[Property::EXPRESSION] = "y=x[0:1]+123";
 
@@ -343,17 +346,21 @@ int main(int argc, char ** argv)
         dev.poll(10);
     }
 
+    // try using threaded device polling
+    dev.start();
+
     std::vector <double> v(3);
+    i = 0;
     while (i++ < 100 && !done) {
-        graph.poll();
         v[i%3] = i;
         if (i == 50) {
             Signal s = *dev.signals().filter(Property::NAME, "in4", Operator::EQUAL);
             s.set_callback(standard_handler);
         }
         sig.set_value(v);
-        dev.poll(period);
+        graph.poll(period);
     }
+    dev.stop();
 
     // try retrieving linked devices
     out << "devices linked to " << dev << ":" << std::endl;

@@ -25,13 +25,14 @@ typedef struct {
  * found in mpr_constants.h */
 const static_prop_t static_props[] = {
     { 0,                0, 0,         0 },         /* MPR_PROP_UNKNOWN */
+    { "@bundle",        1, MPR_INT32, MPR_INT32 }, /* MPR_PROP_BUNDLE */
     { "@data",          1, MPR_PTR,   0  },        /* MPR_PROP_DATA */
     { "@device",        1, MPR_DEV,   MPR_STR },   /* MPR_PROP_DEVICE */
     { "@direction",     1, MPR_INT32, MPR_STR },   /* MPR_PROP_DIR */
+    { "@ephemeral",     1, MPR_BOOL,  MPR_BOOL },  /* MPR_PROP_EPHEM */
     { "@expr",          1, MPR_STR,   MPR_STR },   /* MPR_PROP_EXPR */
     { "@host",          1, MPR_STR,   MPR_STR },   /* MPR_PROP_HOST */
     { "@id",            1, MPR_INT64, MPR_INT64 }, /* MPR_PROP_ID */
-    { "@inst",          1, MPR_INT32, MPR_INT32 }, /* MPR_PROP_INST */
     { "@is_local",      1, MPR_BOOL,  MPR_BOOL },  /* MPR_PROP_IS_LOCAL */
     { "@jitter",        1, MPR_FLT,   MPR_FLT },   /* MPR_PROP_JITTER */
     { "@length",        1, MPR_INT32, MPR_INT32 }, /* MPR_PROP_LEN */
@@ -314,7 +315,7 @@ void mpr_msg_free(mpr_msg msg)
     free(msg);
 }
 
-mpr_msg_atom mpr_msg_get_prop(mpr_msg msg, mpr_prop prop)
+mpr_msg_atom mpr_msg_get_prop(mpr_msg msg, int prop)
 {
     int i;
     for (i = 0; i < msg->num_atoms; i++) {
@@ -607,7 +608,7 @@ void mpr_prop_print(int len, mpr_type type, const void *val)
             break;
         case MPR_INT64:
             for (i = 0; i < len; i++)
-                printf("%" PRINTF_LL "d, ", ((int64_t*)val)[i]);
+                printf("%" PR_MPR_INT64 ", ", ((int64_t*)val)[i]);
             break;
         case MPR_TIME:
             for (i = 0; i < len; i++)

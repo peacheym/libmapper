@@ -2,7 +2,7 @@
 
 import tkinter
 import sys
-import mapper as mpr
+import libmapper as mpr
 
 def on_gui_change(x):
     sig_out.set_value(int(x))
@@ -10,10 +10,12 @@ def on_gui_change(x):
 def on_change(sig, event, id, value, timetag):
     w.set(int(value))
 
-dev = mpr.device("tkgui")
+dev = mpr.Device("tkgui")
 
-sig_in = dev.add_signal(mpr.DIR_IN, "input", 1, mpr.INT32, None, 0, 100, None, on_change)
-sig_out = dev.add_signal(mpr.DIR_OUT, "output", 1, mpr.INT32, None, 0, 100)
+sig_in = dev.add_signal(mpr.Direction.INCOMING, "input", 1, mpr.Type.INT32,
+                        None, 0, 100, None, on_change)
+sig_out = dev.add_signal(mpr.Direction.OUTGOING, "output", 1, mpr.Type.INT32,
+                        None, 0, 100)
 
 ui = tkinter.Tk()
 ui.title("libmapper Python GUI demo")
@@ -33,7 +35,8 @@ def do_poll():
     global name_known
     dev.poll(20)
     if dev.ready and not name_known:
-        name.set('Device name: %s, listening on port %s'%(dev[mpr.PROP_NAME], dev[mpr.PROP_PORT]))
+        name.set('Device name: %s, listening on port %s'%(dev[mpr.Property.NAME],
+                 dev[mpr.Property.PORT]))
         name_known = True
     ui.after(5, do_poll)
 

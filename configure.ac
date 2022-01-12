@@ -1,8 +1,8 @@
 AC_PREREQ(2.61)
 
-m4_define([LIBMAPPER_VERSION],[2.0b])
+m4_define([LIBMAPPER_VERSION],[2.1])
 AC_INIT([libmapper],
-  [m4_esyscmd_s([test -d .git && git describe --always || echo LIBMAPPER_VERSION])],
+  m4_esyscmd_s([test -d .git && (git describe --tags | sed 's/\([^\-]*\)-\([^\-]*\)-\([^\-]*\)/\1.\2+\3/g') || echo LIBMAPPER_VERSION]),
   [dot_mapper@googlegroups.com],[],[http://libmapper.org])
 
 # libtool version: current:revision:age
@@ -18,7 +18,7 @@ AC_INIT([libmapper],
 #
 # If any interfaces have been removed since the last public release, then set
 # age to 0.
-SO_VERSION=8:0:0
+SO_VERSION=9:0:0
 
 AC_CONFIG_SRCDIR([src/device.c])
 AC_CONFIG_HEADERS([src/config.h])
@@ -64,9 +64,6 @@ AM_CONDITIONAL(WINDOWS_DLL, test x$is_windows = xyes && test x$enable_shared = x
 # Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST
 AC_TYPE_SIZE_T
-
-# pthreads
-AX_PTHREAD
 
 # Checks for programs.
 AC_PROG_CC
@@ -124,75 +121,86 @@ AC_COMPILE_IFELSE(
    CXXFLAGS="$_CXXFLAGS"])
 AC_LANG_POP([C++])
 
-# Since we don't require C99, format code for long long int can vary
-# in some compilers.  (In particular, MingW seems to require "I64"
-# instead of "ll")
-AC_MSG_CHECKING([how to print long long int])
-_CFLAGS="$CFLAGS"
-CFLAGS="$_CFLAGS -Werror -Wall"
-AC_COMPILE_IFELSE(
-  [AC_LANG_PROGRAM([#include <stdio.h>],[printf("%lld", (long long int)0);])],
-    [printf_ll=\"ll\"],
-    [AC_COMPILE_IFELSE(
-      [AC_LANG_PROGRAM([#include <stdio.h>],[printf("%I64d", (long long int)0);])],
-        [printf_ll=\"I64\"],
-        AC_MSG_ERROR([printf doesn't support long long int]))])
-AC_MSG_RESULT([$printf_ll])
-AC_DEFINE_UNQUOTED([PRINTF_LL],[$printf_ll],[printf code for type long long int])
-CFLAGS="$_CFLAGS"
-
 # Check options
 AC_ARG_ENABLE(debug,
    [AS_HELP_STRING([--enable-debug],[compile with debug flags])],
-   enable_debug=yes)
+   enable_debug=$enableval)
 
 AC_ARG_ENABLE(tests,
    [  --disable-tests         don't build test programs.],,
-   enable_tests=yes)
+   enable_tests=$enableval, enable_tests=yes)
 
 AC_ARG_ENABLE(docs,
    [  --disable-docs          don't build the documentation.],,
-   enable_docs=yes)
+   enable_docs=$enableval, enable_docs=yes)
 
 AC_ARG_ENABLE(audio,
    [  --disable-audio         don't build the audio examples.],,
-   enable_audio=yes)
+   enable_audio=$enableval, enable_audio=yes)
 
-swig_enabled=yes
-AC_ARG_ENABLE(swig,
-   [  --disable-swig          don't build the SWIG bindings.],
-   swig_enabled=$enableval)
+AC_ARG_ENABLE(python,
+   [  --disable-python        don't build the Python bindings.],
+   enable_python=$enableval=$enableval, enable_python=yes)
 
-jni_enabled=yes
 AC_ARG_ENABLE(jni,
-   [  --disable-jni          don't build the Java JNI bindings.],
-   jni_enabled=$enableval)
+   [  --disable-jni           don't build the Java JNI bindings.],
+   enable_jni=$enableval, enable_jni=yes)
 
-if test x$swig_enabled = xyes; then
-   AC_CHECK_PROG([SWIG], [swig], [swig])
-   if test x$SWIG = x; then
-     swig_enabled=no
-     swig_explain="(swig not found)"
-   else
-     AM_PATH_PYTHON(2.3, [have_python="yes"], [have_python="no"])
-     if test x$have_python = xyes; then
-       SWIGDIR=swig
-       AC_SUBST(SWIGDIR)
-       PYEXT=$($PYTHON -c "import sys; print({'win32':'pyd','darwin':'so','linux':'so','linux2':'so'}[[sys.platform]])")
-       AC_SUBST(PYEXT)
-       case "$PYTHON_VERSION" in
-       3*) PY3SWIG=" -py3"; AC_SUBST(PY3SWIG)
-       esac
-       swig_explain="($(basename $PYTHON)$PY3SWIG)"
-     else
-       swig_enabled=no
-       swig_explain="(python not found)"
+AC_ARG_ENABLE(csharp,
+   [  --disable-csharp        don't build the C# bindings.],
+   enable_csharp=$enableval, enable_csharp=yes)
+
+AC_ARG_ENABLE(threads,
+   [  --disable-threads       don't build with threading support.],
+   enable_threads=$enableval, enable_threads=yes)
+
+# Check if win32 threads are wanted
+AC_ARG_WITH(win32-threads,
+   [  --with-win32-threads    Use win32 threads], [], [with_win32_threads=yes])
+if test "x$enable_threads" = xyes; then
+   AC_CHECK_HEADER([winsock2.h], [HAVE_WINSOCK2_H=yes])
+   if test "x$HAVE_WINSOCK2_H" = xyes; then
+     if test "x$with_win32_threads" = xyes; then
+       have_threads="yes"
      fi
    fi
 fi
 
+# Check for whether threads are wanted, and if so, did we find libpthread.
+if test "x$enable_threads" = "xyes"; then
+  if test "x$with_win32_threads" = "xyes" && test "x$have_threads" = "xyes"; then
+    AC_DEFINE([HAVE_WIN32_THREADS],[1],[Define to use the win32 library for threading.])
+    threads_explain="(win32 threads)"
+  else
+  AC_SEARCH_LIBS([pthread_create], [c pthread],
+    [AS_IF([! test x"$ac_res" = x"-lc" && ! test x"$ac_res" = x"none required"],
+           [LIBPTHREAD="$ac_res"])
+     have_threads=yes;
+     HAVE_LIBPTHREAD=1;
+     threads_explain="(pthread)"
+     AC_DEFINE([HAVE_LIBPTHREAD],[1],[Define to use the pthread library for threading.])],
+     AC_MSG_ERROR([pthread not found. Try option --disable-threads.]))
+  fi
+  AC_DEFINE(ENABLE_THREADS, [1], [Define this to enable threads.])
+fi
+
+if test x$enable_python = xyes; then
+   AM_PATH_PYTHON(2.3, [have_python="yes"], [have_python="no"])
+   if test x$have_python = xyes; then
+     PYEXT=$($PYTHON -c "import sys; print({'win32':'pyd','darwin':'so','linux':'so','linux2':'so'}[[sys.platform]])")
+     AC_SUBST(PYEXT)
+     case "$PYTHON_VERSION" in
+     3*) PY3=" -py3"; AC_SUBST(PY3)
+     esac
+     python_explain="($(basename $PYTHON)$PY3)"
+   else
+     enable_python=no
+     python_explain="(python not found)"
+   fi
+fi
+
 # Check for JNI
-if test x$jni_enabled = xyes; then
+if test x$enable_jni = xyes; then
    AC_MSG_CHECKING([JDK path])
    if test x"$JAVA_HOME" == "x"; then
       JAVA_HOME="$(dirname $(dirname $(readlink /etc/alternatives/javac 2>/dev/null)))"
@@ -238,29 +246,33 @@ if test x$jni_enabled = xyes; then
    fi
 
    AC_PATH_PROG([JAVAC], [javac], [], ["$JDKBINPATH"$PATH_SEPARATOR$PATH])
-   AC_PATH_PROG([JAVAH], [javah], [], ["$JDKBINPATH"$PATH_SEPARATOR$PATH])
    AC_PATH_PROG([JAR],   [jar],   [], ["$JDKBINPATH"$PATH_SEPARATOR$PATH])
    if test x$JAVAC = x; then
-     jni_enabled=no
+     enable_jni=no
      jni_explain="(javac not found)"
-   elif test x$JAVAH = x; then
-     jni_enabled=no
-     jni_explain="(javah not found)"
    elif test x$JAR = x; then
-     jni_enabled=no
+     enable_jni=no
      jni_explain="(jar not found)"
    else
      CFLAGS_revert="$CFLAGS"
      CFLAGS="$CFLAGS $JNIFLAGS"
      AC_CHECK_HEADER([jni.h],
-       [jni_enabled=yes],
-       [jni_enabled=no; jni_explain="(jni.h not found)"])
+       [enable_jni=yes],
+       [enable_jni=no; jni_explain="(jni.h not found)"])
      CFLAGS="$CFLAGS_revert"
-     if test x$jni_enabled = xyes; then
+     if test x$enable_jni = xyes; then
        JNI=jni
        AC_SUBST(JNIFLAGS)
        AC_SUBST(JNI)
      fi
+   fi
+fi
+
+if test x$enable_csharp = xyes; then
+   AC_CHECK_PROG([CSC], [csc], [csc])
+   if test x$CSC = x; then
+     enable_csharp=no
+     csharp_explain="(csc not found)"
    fi
 fi
 
@@ -330,6 +342,12 @@ AS_IF([test x$with_liblo != xno],[
   LIBS="$tmpLIBS"
 ])
 
+# If shared is disabled, need to link bindings directly to zlib
+if test x$enable_shared != xyes; then
+  EXTRA_LIBS_BINDINGS=\"z\"
+fi
+AC_SUBST(EXTRA_LIBS_BINDINGS)
+
 # Debug mode
 AS_IF([test x$enable_debug = xyes],
       [CFLAGS="-g -O0 -Wall -Werror -DDEBUG `echo $CFLAGS | sed 's/-O2//'`"
@@ -343,9 +361,10 @@ CXXFLAGS="-I. $CXXFLAGS"
 
 AM_CONDITIONAL(TESTS, test "x$enable_tests" = xyes)
 AM_CONDITIONAL(HAVE_DOXYGEN, test "x$DOXYGEN" != x)
-AM_CONDITIONAL(HAVE_PYTHON, test "x$have_python" = xyes)
-AM_CONDITIONAL(HAVE_SWIG, test "x$swig_enabled" = xyes)
+AM_CONDITIONAL(HAVE_PYTHON, test "x$enable_python" = xyes)
+AM_CONDITIONAL(HAVE_CSHARP, test "x$enable_csharp" = xyes)
 AM_CONDITIONAL(HAVE_AUDIO, test "x$enable_audio" = xyes)
+AM_CONDITIONAL(ENABLE_THREADS, test "x$enable_threads" = xyes)
 
 AC_CONFIG_FILES([
     Makefile
@@ -354,16 +373,16 @@ AC_CONFIG_FILES([
     test/Makefile
     doc/Makefile
     doc/libmapper.doxyfile
-    swig/Makefile
-    swig/setup.py
     jni/Makefile
     jni/mapper/NativeLib.java
+    bindings/Makefile
+    bindings/csharp/Makefile
+    bindings/python/Makefile
+    bindings/python/setup.py
     examples/Makefile
     examples/pwm_synth/Makefile
-    examples/py_tk_gui/Makefile
-    examples/py_tk_gui/setup.py
     extra/Makefile
-    extra/osx/Makefile
+    extra/macOS/Makefile
     libmapper.pc
 ])
 AC_OUTPUT
@@ -372,11 +391,14 @@ AC_OUTPUT
 echo
 echo libmapper configured:
 echo --------------------------------------------------
-echo "building documention...    " $enable_docs $docs_explain
-echo "building tests...          " $enable_tests
-echo "building SWIG bindings...  " $swig_enabled $swig_explain
-echo "building Java bindings...  " $jni_enabled $jni_explain
-echo "building audio examples... " $enable_audio $audio_explain
+echo "building documention...     " $enable_docs $docs_explain
+echo "building tests...           " $enable_tests
+echo "threading support...        " $enable_threads $threads_explain
+echo "building Python bindings... " $enable_python $python_explain
+echo "building Java bindings...   " $enable_jni $jni_explain
+echo "building C# bindings...     " $enable_csharp $csharp_explain
+echo "building audio examples...  " $enable_audio $audio_explain
 AS_IF([test x$enable_debug = xyes],
       [echo "Debug flags enabled."])
+echo "version                     " $PACKAGE_VERSION
 echo --------------------------------------------------
