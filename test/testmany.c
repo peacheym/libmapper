@@ -1,13 +1,21 @@
+#ifdef WIN32
+#include "../src/mapper_internal.h"
+#endif
 #include <mapper/mapper.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
 #include <string.h>
 #include <time.h>
-#include <sys/time.h>
+
 #include <math.h>
 #include <lo/lo.h>
+#ifdef WIN32
+#include <io.h>
+#else
+#include <sys/time.h>
 #include <unistd.h>
+#endif
 #include <signal.h>
 
 int verbose = 1;
@@ -53,7 +61,7 @@ int setup_devs(const char *iface) {
 	float mn=0, mx=1;
     int i, j;
 
-    mpr_graph g = shared_graph ? mpr_graph_new(MPR_OBJ) : 0;
+    mpr_graph g = shared_graph ? mpr_graph_new(0) : 0;
     if (g && iface) mpr_graph_set_interface(g, iface);
 	for (i = 0; i < num_devs; i++) {
 		devices[i] = mpr_dev_new("testmany", g);

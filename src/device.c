@@ -738,6 +738,7 @@ int mpr_dev_poll(mpr_dev dev, int block_ms)
     RETURN_ARG_UNLESS(dev && dev->is_local, 0);
     net = &dev->obj.graph->net;
     mpr_net_poll(net);
+    mpr_graph_housekeeping(dev->obj.graph);
 
     if (!((mpr_local_dev)dev)->registered) {
         if (lo_servers_recv_noblock(&net->servers[SERVER_ADMIN], status, 2, block_ms)) {
@@ -781,6 +782,7 @@ int mpr_dev_poll(mpr_dev dev, int block_ms)
             elapsed = (mpr_get_current_time() - then) * 1000;
             if ((elapsed - checked_admin) > 100) {
                 mpr_net_poll(net);
+                mpr_graph_housekeeping(dev->obj.graph);
                 checked_admin = elapsed;
             }
             left_ms = block_ms - elapsed;
@@ -1147,17 +1149,31 @@ void mpr_dev_send_state(mpr_dev dev, net_msg_t cmd)
 
 int mpr_dev_add_link(mpr_dev dev, mpr_dev rem)
 {
-    int i;
+    int i, found = 0;
     for (i = 0; i < dev->num_linked; i++) {
-        if (dev->linked[i] && dev->linked[i]->obj.id == rem->obj.id)
-            return 0;
+        if (dev->linked[i] && dev->linked[i]->obj.id == rem->obj.id) {
+            found = 0x01;
+            break;
+        }
+    }
+    if (!found) {
+        i = ++dev->num_linked;
+        dev->linked = realloc(dev->linked, i * sizeof(mpr_dev));
+        dev->linked[i-1] = rem;
     }
 
-    /* not found - add a new linked device */
-    i = ++dev->num_linked;
-    dev->linked = realloc(dev->linked, i * sizeof(mpr_dev));
-    dev->linked[i-1] = rem;
-    return 1;
+    for (i = 0; i < rem->num_linked; i++) {
+        if (rem->linked[i] && rem->linked[i]->obj.id == dev->obj.id) {
+            found |= 0x10;
+            break;
+        }
+    }
+    if (!(found & 0x10)) {
+        i = ++rem->num_linked;
+        rem->linked = realloc(rem->linked, i * sizeof(mpr_dev));
+        rem->linked[i-1] = dev;
+    }
+    return !found;
 }
 
 void mpr_dev_remove_link(mpr_dev dev, mpr_dev rem)
@@ -1171,7 +1187,17 @@ void mpr_dev_remove_link(mpr_dev dev, mpr_dev rem)
         --dev->num_linked;
         dev->linked = realloc(dev->linked, dev->num_linked * sizeof(mpr_dev));
         dev->obj.props.synced->dirty = 1;
-        return;
+        break;
+    }
+    for (i = 0; i < rem->num_linked; i++) {
+        if (!rem->linked[i] || rem->linked[i]->obj.id != dev->obj.id)
+            continue;
+        for (j = i+1; j < rem->num_linked; j++)
+            rem->linked[j-1] = rem->linked[j];
+        --rem->num_linked;
+        rem->linked = realloc(rem->linked, rem->num_linked * sizeof(mpr_dev));
+        rem->obj.props.synced->dirty = 1;
+        break;
     }
 }
 
@@ -1268,36 +1294,38 @@ void mpr_dev_manage_subscriber(mpr_local_dev dev, lo_address addr, int flags,
     RETURN_UNLESS(ip && port);
     mpr_time_set(&t, MPR_NOW);
 
-    while (*s) {
-        const char *s_ip = lo_address_get_hostname((*s)->addr);
-        const char *s_port = lo_address_get_port((*s)->addr);
-        if (strcmp(ip, s_ip)==0 && strcmp(port, s_port)==0) {
-            /* subscriber already exists */
-            if (!flags || !timeout_sec) {
-                /* remove subscription */
-                mpr_subscriber temp = *s;
-                int prev_flags = temp->flags;
-                trace_dev(dev, "removing subscription from %s:%s\n", s_ip, s_port);
-                *s = temp->next;
-                FUNC_IF(lo_address_free, temp->addr);
-                free(temp);
-                RETURN_UNLESS(flags && (flags &= ~prev_flags));
+    if (timeout_sec >= 0) {
+        while (*s) {
+            const char *s_ip = lo_address_get_hostname((*s)->addr);
+            const char *s_port = lo_address_get_port((*s)->addr);
+            if (strcmp(ip, s_ip)==0 && strcmp(port, s_port)==0) {
+                /* subscriber already exists */
+                if (!flags || !timeout_sec) {
+                    /* remove subscription */
+                    mpr_subscriber temp = *s;
+                    int prev_flags = temp->flags;
+                    trace_dev(dev, "removing subscription from %s:%s\n", s_ip, s_port);
+                    *s = temp->next;
+                    FUNC_IF(lo_address_free, temp->addr);
+                    free(temp);
+                    RETURN_UNLESS(flags && (flags &= ~prev_flags));
+                }
+                else {
+                    /* reset timeout */
+                    int temp = flags;
+    #ifdef DEBUG
+                    trace_dev(dev, "renewing subscription from %s:%s for %d seconds with flags ",
+                              s_ip, s_port, timeout_sec);
+                    print_subscription_flags(flags);
+    #endif
+                    (*s)->lease_exp = t.sec + timeout_sec;
+                    flags &= ~(*s)->flags;
+                    (*s)->flags = temp;
+                }
+                break;
             }
-            else {
-                /* reset timeout */
-                int temp = flags;
-#ifdef DEBUG
-                trace_dev(dev, "renewing subscription from %s:%s for %d seconds with flags ",
-                          s_ip, s_port, timeout_sec);
-                print_subscription_flags(flags);
-#endif
-                (*s)->lease_exp = t.sec + timeout_sec;
-                flags &= ~(*s)->flags;
-                (*s)->flags = temp;
-            }
-            break;
+            s = &(*s)->next;
         }
-        s = &(*s)->next;
     }
 
     RETURN_UNLESS(flags);

@@ -1059,7 +1059,7 @@ static int handler_logout(const char *path, const char *types, lo_arg **av,
             /* Check if we have any links to this device, if so remove them */
             if (remote && (lnk = mpr_dev_get_link_by_remote(dev, remote))) {
                 /* TODO: release maps, call local handlers and inform subscribers */
-                trace_dev(dev, "removing link to expired device '%s'.\n", remote->name);
+                trace_dev(dev, "removing link to removed device '%s'.\n", remote->name);
                 mpr_rtr_remove_link(net->rtr, lnk);
                 mpr_graph_remove_link(gph, lnk, MPR_OBJ_REM);
             }
@@ -1083,7 +1083,7 @@ static int handler_subscribe(const char *path, const char *types, lo_arg **av,
                              int ac, lo_message msg, void *user)
 {
     mpr_local_dev dev = (mpr_local_dev)user;
-    int i, version = -1, flags = 0, timeout_seconds = 0;
+    int i, version = -1, flags = 0, timeout_seconds = -1;
 
 #ifdef DEBUG
     trace_dev(dev, "received /subscribe ");
@@ -1129,6 +1129,7 @@ static int handler_subscribe(const char *path, const char *types, lo_arg **av,
                 timeout_seconds = (int)av[i]->d;
             else
                 {trace_dev(dev, "error parsing subscription lease prop.\n");}
+            timeout_seconds = timeout_seconds >= 0 ? timeout_seconds : 0;
         }
     }
 
@@ -1484,16 +1485,13 @@ static mpr_map find_map(mpr_net net, const char *types, int ac, lo_arg **av,
     if (i < ac && MPR_INT64 == types[++i]) {
         id = av[i]->i64;
         map = (mpr_map)mpr_graph_get_obj(net->graph, MPR_MAP, id);
-        trace_graph("%s map with id %"PR_MPR_ID"\n", map ? "found" : "couldn't find", id);
-        if (map) {
 #ifdef DEBUG
-            trace_graph("  %s", map->num_src > 1 ? "[" : "");
-            for (i = 0; i < map->num_src; i++)
-                printf("'%s:%s'%s, ", map->src[i]->sig->dev->name, map->src[i]->sig->name,
-                       map->src[i]->sig->is_local ? "*" : "");
-            printf("\b\b%s -> '%s:%s'%s\n", map->num_src > 1 ? "]" : "", map->dst->sig->dev->name,
-                   map->dst->sig->name, map->dst->sig->is_local ? "*" : "");
+        trace_graph("%s map with id %"PR_MPR_ID" ", map ? "found" : "couldn't find", id);
+        if (map)
+            mpr_prop_print(1, MPR_MAP, map);
+        printf("\n");
 #endif
+        if (map) {
             is_loc = mpr_obj_get_prop_as_int32((mpr_obj)map, MPR_PROP_IS_LOCAL, NULL);
             RETURN_ARG_UNLESS(!loc || is_loc, MPR_MAP_ERROR);
             if (map->num_src < num_src && (flags & UPDATE)) {

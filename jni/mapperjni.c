@@ -238,8 +238,7 @@ static jobject get_jobject_from_graph_evt(JNIEnv *env, mpr_graph_evt evt)
             obj = (*env)->GetStaticObjectField(env, cls, fid);
         }
         else {
-            printf("Error looking up graph/Event field '%s'.\n",
-                   graph_evt_strings[evt]);
+            printf("Error looking up graph/Event field '%s'.\n", graph_evt_strings[evt]);
             exit(1);
         }
     }
@@ -408,7 +407,7 @@ static void java_signal_update_cb(mpr_sig sig, mpr_sig_evt evt, mpr_id id, int l
     jclass listener_cls = (*genv)->GetObjectClass(genv, update_cb);
     jmethodID mid = 0;
     inst_jni_context ictx;
-    // TODO: handler val==NULL
+
     // prep values
     if (ctx->listener_type <= SIG_CB_UNKNOWN || ctx->listener_type >= NUM_SIG_CB_TYPES)
         return;
@@ -418,22 +417,18 @@ static void java_signal_update_cb(mpr_sig sig, mpr_sig_evt evt, mpr_id id, int l
         if (!ictx) {
             ictx = ((inst_jni_context) calloc(1, sizeof(inst_jni_context_t)));
             jclass cls = (*genv)->FindClass(genv, "mapper/Signal$Instance");
-            // jclass cls = (*genv)->FindClass(genv, "mapper/Signal");
             if (!cls) {
-                printf("error finding Instance class\n");
-                // printf("error finding Signal class\n");
+                printf("Error: couldn't find Signal.Instance class\n");
                 return;
             }
             mid = (*genv)->GetMethodID(genv, cls, "<init>", "(Lmapper/Signal;J)V");
-            // mid = (*genv)->GetMethodID(genv, cls, "instance", "()Lmapper/Signal$Instance;");
             if (!mid) {
-                printf("error finding Instance constructor method id\n");
+                printf("Error: couldn't find Signal.Instance constructor method id\n");
                 return;
             }
-            // jobject obj = (*genv)->CallObjectMethod(genv, ctx->signal, mid);
             jobject obj = (*genv)->NewObject(genv, cls, mid, ctx->signal, id);
             if (!obj) {
-                printf("error instantiating Signal.Instance object\n");
+                printf("Error: couldn't instantiate Signal.Instance object\n");
                 return;
             }
             ictx->inst = (*genv)->NewGlobalRef(genv, obj);
@@ -449,11 +444,13 @@ static void java_signal_update_cb(mpr_sig sig, mpr_sig_evt evt, mpr_id id, int l
     }
     switch (ctx->listener_type % SIG_CB_SCAL_INT_INST) {
         case SIG_CB_SCAL_INT: {
-            int ival;
-            switch (type) {
-                case MPR_INT32: ival = *(int*)val;              break;
-                case MPR_FLT:   ival = (int)*(float*)val;       break;
-                case MPR_DBL:   ival = (int)*(double*)val;      break;
+            int ival = 0;
+            if (val) {
+                switch (type) {
+                    case MPR_INT32: ival = *(int*)val;              break;
+                    case MPR_FLT:   ival = (int)*(float*)val;       break;
+                    case MPR_DBL:   ival = (int)*(double*)val;      break;
+                }
             }
             (*genv)->CallVoidMethod(genv, update_cb, mid, sig_ptr, eventobj, ival, jtime);
             if ((*genv)->ExceptionOccurred(genv)) {
@@ -464,11 +461,13 @@ static void java_signal_update_cb(mpr_sig sig, mpr_sig_evt evt, mpr_id id, int l
             break;
         }
         case SIG_CB_SCAL_FLT: {
-            float fval;
-            switch (type) {
-                case MPR_INT32: fval = (float)*(int*)val;       break;
-                case MPR_FLT:   fval = *(float*)val;            break;
-                case MPR_DBL:   fval = (float)*(double*)val;    break;
+            float fval = 0;
+            if (val) {
+                switch (type) {
+                    case MPR_INT32: fval = (float)*(int*)val;       break;
+                    case MPR_FLT:   fval = *(float*)val;            break;
+                    case MPR_DBL:   fval = (float)*(double*)val;    break;
+                }
             }
             (*genv)->CallVoidMethod(genv, update_cb, mid, sig_ptr, eventobj, fval, jtime);
             if ((*genv)->ExceptionOccurred(genv))
@@ -476,11 +475,13 @@ static void java_signal_update_cb(mpr_sig sig, mpr_sig_evt evt, mpr_id id, int l
             break;
         }
         case SIG_CB_SCAL_DBL: {
-            double dval;
-            switch (type) {
-                case MPR_INT32: dval = (double)*(int*)val;      break;
-                case MPR_FLT:   dval = (double)*(float*)val;    break;
-                case MPR_DBL:   dval = *(double*)val;           break;
+            double dval = 0;
+            if (val) {
+                switch (type) {
+                    case MPR_INT32: dval = (double)*(int*)val;      break;
+                    case MPR_FLT:   dval = (double)*(float*)val;    break;
+                    case MPR_DBL:   dval = *(double*)val;           break;
+                }
             }
             (*genv)->CallVoidMethod(genv, update_cb, mid, sig_ptr, eventobj, dval, jtime);
             if ((*genv)->ExceptionOccurred(genv))
@@ -488,6 +489,10 @@ static void java_signal_update_cb(mpr_sig sig, mpr_sig_evt evt, mpr_id id, int l
             break;
         }
         case SIG_CB_VECT_INT: {
+            if (!val) {
+                (*genv)->CallVoidMethod(genv, update_cb, mid, sig_ptr, eventobj, 0, jtime);
+                break;
+            }
             jintArray arr = (*genv)->NewIntArray(genv, len);
             if (!arr)
                 return;
@@ -515,6 +520,10 @@ static void java_signal_update_cb(mpr_sig sig, mpr_sig_evt evt, mpr_id id, int l
             break;
         }
         case SIG_CB_VECT_FLT: {
+            if (!val) {
+                (*genv)->CallVoidMethod(genv, update_cb, mid, sig_ptr, eventobj, 0, jtime);
+                break;
+            }
             jfloatArray arr = (*genv)->NewFloatArray(genv, len);
             if (!arr)
                 return;
@@ -544,6 +553,10 @@ static void java_signal_update_cb(mpr_sig sig, mpr_sig_evt evt, mpr_id id, int l
             break;
         }
         case SIG_CB_VECT_DBL: {
+            if (!val) {
+                (*genv)->CallVoidMethod(genv, update_cb, mid, sig_ptr, eventobj, 0, jtime);
+                break;
+            }
             jdoubleArray arr = (*genv)->NewDoubleArray(genv, len);
             if (!arr)
                 return;
@@ -1259,7 +1272,7 @@ JNIEXPORT void JNICALL Java_mapper_Device_mapperDeviceFree
         return;
 
     /* Free all references to Java objects. */
-    mpr_obj *sigs = mpr_dev_get_sigs(dev, MPR_DIR_ANY);
+    mpr_list sigs = mpr_dev_get_sigs(dev, MPR_DIR_ANY);
     while (sigs) {
         mpr_sig temp = (mpr_sig)*sigs;
         sigs = mpr_list_get_next(sigs);
@@ -1457,92 +1470,84 @@ JNIEXPORT jlong JNICALL Java_mapper_List__1deref
 }
 
 JNIEXPORT void JNICALL Java_mapper_List__1filter
-  (JNIEnv *env, jobject obj, jlong list, jint id, jstring name, jobject val,
-   jint op)
+  (JNIEnv *env, jobject obj, jlong list, jint id, jstring name, jobject val, jint op)
 {
-// TODO
+    // STUB
 }
 
 JNIEXPORT void JNICALL Java_mapper_List__1free
-  (JNIEnv *env, jobject obj, jlong list)
+  (JNIEnv *env, jobject obj, jlong jlist)
 {
-    mpr_obj *objs = (mpr_obj*) ptr_jlong(list);
-    if (objs)
-        mpr_list_free(objs);
+    mpr_list list = (mpr_list) ptr_jlong(jlist);
+    if (list)
+        mpr_list_free(list);
 }
 
 JNIEXPORT jlong JNICALL Java_mapper_List__1isect
-  (JNIEnv *env, jobject obj, jlong lhs, jlong rhs)
+  (JNIEnv *env, jobject obj, jlong jlhs, jlong jrhs)
 {
-    mpr_obj *objs_lhs = (mpr_obj*) ptr_jlong(lhs);
-    mpr_obj *objs_rhs = (mpr_obj*) ptr_jlong(rhs);
+    mpr_list lhs = (mpr_list) ptr_jlong(jlhs);
+    mpr_list rhs = (mpr_list) ptr_jlong(jrhs);
 
-    if (!objs_lhs || !objs_rhs)
+    if (!lhs || !rhs)
         return 0;
 
     // use a copy of rhs
-    mpr_obj *objs_rhs_cpy = mpr_list_get_cpy(objs_rhs);
-    return jlong_ptr(mpr_list_get_isect(objs_lhs, objs_rhs_cpy));
+    mpr_list rhs_cpy = mpr_list_get_cpy(rhs);
+    return jlong_ptr(mpr_list_get_isect(lhs, rhs_cpy));
 }
 
 JNIEXPORT jlong JNICALL Java_mapper_List__1union
-  (JNIEnv *env, jobject obj, jlong lhs, jlong rhs)
+  (JNIEnv *env, jobject obj, jlong jlhs, jlong jrhs)
 {
-    mpr_obj *objs_lhs = (mpr_obj*) ptr_jlong(lhs);
-    mpr_obj *objs_rhs = (mpr_obj*) ptr_jlong(rhs);
+    mpr_list lhs = (mpr_list) ptr_jlong(jlhs);
+    mpr_list rhs = (mpr_list) ptr_jlong(jrhs);
 
-    if (!objs_rhs)
-        return lhs;
+    if (!rhs)
+        return jlhs;
 
     // use a copy of rhs
-    mpr_dev *objs_rhs_cpy = mpr_list_get_cpy(objs_rhs);
-    return jlong_ptr(mpr_list_get_union(objs_lhs, objs_rhs_cpy));
+    mpr_list rhs_cpy = mpr_list_get_cpy(rhs);
+    return jlong_ptr(mpr_list_get_union(lhs, rhs_cpy));
 }
 
 JNIEXPORT jint JNICALL Java_mapper_List__1size
-  (JNIEnv *env, jobject obj, jlong list)
+  (JNIEnv *env, jobject obj, jlong jlist)
 {
-    mpr_obj *objs = (mpr_obj*) ptr_jlong(list);
-    return objs ? mpr_list_get_size(objs) : 0;
+    mpr_list list = (mpr_list) ptr_jlong(jlist);
+    return list ? mpr_list_get_size(list) : 0;
 }
 
 JNIEXPORT jlong JNICALL Java_mapper_List__1next
-  (JNIEnv *env, jobject obj, jlong list)
+  (JNIEnv *env, jobject obj, jlong jlist)
 {
-    mpr_obj *objs = (mpr_obj*) ptr_jlong(list);
-    return objs ? jlong_ptr(mpr_list_get_next(objs)) : 0;
+    mpr_list list = (mpr_list) ptr_jlong(jlist);
+    return list ? jlong_ptr(mpr_list_get_next(list)) : 0;
 }
 
 JNIEXPORT jlong JNICALL Java_mapper_List__1diff
-  (JNIEnv *env, jobject obj, jlong lhs, jlong rhs)
+  (JNIEnv *env, jobject obj, jlong jlhs, jlong jrhs)
 {
-    mpr_obj *objs_lhs = (mpr_obj*) ptr_jlong(lhs);
-    mpr_obj *objs_rhs = (mpr_obj*) ptr_jlong(rhs);
+    mpr_list lhs = (mpr_list) ptr_jlong(jlhs);
+    mpr_list rhs = (mpr_list) ptr_jlong(jrhs);
 
-    if (!objs_lhs || !objs_rhs)
-        return lhs;
+    if (!lhs || !rhs)
+        return jlhs;
 
     // use a copy of rhs
-    mpr_obj *objs_rhs_cpy = mpr_list_get_cpy(objs_rhs);
-    return jlong_ptr(mpr_list_get_diff(objs_lhs, objs_rhs_cpy));
+    mpr_list rhs_cpy = mpr_list_get_cpy(rhs);
+    return jlong_ptr(mpr_list_get_diff(lhs, rhs_cpy));
 }
 
+// TODO
 JNIEXPORT jboolean JNICALL Java_mapper_List__1contains
   (JNIEnv *env, jobject jobj, jlong list, jobject item);
 
-/*
- * Class:     mapper_List
- * Method:    _containsAll
- * Signature: (JJ)Z
- */
+// TODO
 JNIEXPORT jboolean JNICALL Java_mapper_List__1containsAll
   (JNIEnv *env, jobject jobs, jlong lhs, jlong rhs);
 
-/*
- * Class:     mapper_List
- * Method:    toArray
- * Signature: ()[Lmapper/AbstractObject;
- */
+// TODO
 JNIEXPORT jobjectArray JNICALL Java_mapper_List_toArray
   (JNIEnv *env, jobject obj);
 
@@ -1642,6 +1647,7 @@ JNIEXPORT jlong JNICALL Java_mapper_Signal_00024Instance_mapperInstance
     else if (mpr_sig_get_num_inst(sig, MPR_STATUS_RESERVED)) {
         // retrieve id from a reserved signal instance
         id = mpr_sig_get_inst_id(sig, 0, MPR_STATUS_RESERVED);
+        mpr_sig_activate_inst(sig, id);
     }
     else {
         // try to steal an active instance
@@ -1728,7 +1734,6 @@ JNIEXPORT void JNICALL Java_mapper_Signal_mapperSignalSetCB
     jint flags)
 {
     mpr_sig sig = (mpr_sig) ptr_jlong(jsig);
-    // signal_jni_context ctx = mpr_obj_get_prop_as_ptr((mpr_obj)sig, MPR_PROP_DATA, 0);
     signal_jni_context ctx = (signal_jni_context)signal_user_data(sig);
     if (!ctx) {
         return;
@@ -1752,13 +1757,6 @@ JNIEXPORT void JNICALL Java_mapper_Signal_mapperSignalSetCB
         mpr_sig_set_cb(sig, NULL, 0);
     }
     return;
-}
-
-JNIEXPORT jobject JNICALL Java_mapper_Signal_listener
-  (JNIEnv *env, jobject obj)
-{
-    // TODO
-    return NULL;
 }
 
 JNIEXPORT void JNICALL Java_mapper_Signal_mapperSignalReserveInstances
@@ -1805,8 +1803,7 @@ JNIEXPORT jobject JNICALL Java_mapper_Signal_oldestActiveInstance
 {
     mpr_sig sig = (mpr_sig)get_mpr_obj_from_jobject(env, obj);
     if (!sig) {
-        printf("couldn't retrieve signal in "
-               " Java_mapper_Signal_oldestActiveInstance()\n");
+        printf("couldn't retrieve signal in Java_mapper_Signal_oldestActiveInstance()\n");
         return 0;
     }
     mpr_id id = mpr_sig_get_oldest_inst_id(sig);

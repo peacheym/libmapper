@@ -1,7 +1,18 @@
+__all__ = [
+
+    '__version__', 'Device', 'Location', 'Direction', 'Operator', 'Property',
+    'Protocol', 'Status', 'Stealing', 'Type', 'Time', 'Object', 'List', 'InstanceId',
+    'Signal', 'SignalInstance', 'Map', 'Graph'
+
+]
+
 from ctypes import *
 from enum import IntFlag, Enum
 import weakref, sys
 import platform
+import os
+
+__version__ = '@PACKAGE_VERSION@'
 
 # need different library extensions for Linux, Windows, MacOS
 if platform.uname()[0] == "Windows":
@@ -10,7 +21,10 @@ elif platform.uname()[0] == "Linux":
     name = "libmapper.so"
 else:
     name = "libmapper.dylib"
-mpr = cdll.LoadLibrary(name)
+try:
+    mpr = cdll.LoadLibrary(os.path.join(os.path.dirname(__file__), name))
+except IOError:
+    mpr = cdll.LoadLibrary(name)
 
 # configuration of Py_IncRef and Py_DecRef
 _c_inc_ref = pythonapi.Py_IncRef
@@ -64,6 +78,7 @@ class Operator(Enum):
 class Property(Enum):
     UNKNOWN          = 0x0000
     BUNDLE           = 0x0100
+    # DATA DELIBERATELY OMITTED
     DEVICE           = 0x0300
     DIRECTION        = 0x0400
     EPHEMERAL        = 0x0500
@@ -424,7 +439,7 @@ class List:
             mpr.mpr_list_get_size.argtypes = [c_void_p]
             mpr.mpr_list_get_size.restype = c_int
             index += mpr.mpr_list_get_size(self._list)
-        if index > 0:
+        if index >= 0:
             mpr.mpr_list_get_idx.argtypes = [c_void_p, c_uint]
             mpr.mpr_list_get_idx.restype = c_void_p
             ret = mpr.mpr_list_get_idx(self._list, index)
@@ -477,7 +492,7 @@ class Object:
         elif _type is Property:
             _idx.value = key_or_idx.value
         elif _type is int:
-            if key_or_idx == 0x0200:
+            if key_or_idx == 0x0200: # MPR_PROP_DATA
                 print("mpr.Object.set_property({}) : key 0x0200 (DATA) is protected".format(key_or_idx))
                 return self
             _idx.value = key_or_idx
@@ -554,7 +569,7 @@ class Object:
                                                byref(_type), byref(_val), byref(_pub))
         else:
             return None
-        if prop == 0 or prop == 0x0200:
+        if prop == 0 or prop == 0x0200: # MPR_PROP_DATA
             return None
         prop = Property(prop)
 
@@ -652,7 +667,6 @@ class Object:
             print("mpr.Object.get_property({}:{}) : can't handle prop type".format(prop, key_or_idx), _type)
             return None
 
-        # TODO: if key_or_idx is str we can reuse it instead of decoding
         if isinstance(key_or_idx, str):
             return val
         else:
@@ -793,18 +807,19 @@ class Signal(Object):
         return 'mpr.Signal:{}'.format(self[Property.NAME])
 
     def set_callback(self, callback, events=Event.ALL):
-        if callback:
-#            print("incrementing refcount for cb", callback)
-            _c_inc_ref(callback)
-
         data = mpr.mpr_obj_get_prop_as_ptr(self._obj, 0x0200, None) # MPR_PROP_DATA
         if data != None:
             cb = cast(data, py_sig_cb_type)
 #            print("decrementing refcount for cb", cb)
             _c_dec_ref(cb)
 
-        mpr.mpr_obj_set_prop.argtypes = [c_void_p, c_int, c_char_p, c_int, c_char, py_sig_cb_type, c_int]
-        mpr.mpr_obj_set_prop(self._obj, 0x0200, None, 1, Type.POINTER.value, py_sig_cb_type(callback), 0)
+        if callback:
+#            print("incrementing refcount for cb", callback)
+            _c_inc_ref(callback)
+
+        callback = py_sig_cb_type(callback)
+        _c_inc_ref(callback)
+        mpr.mpr_obj_set_prop(self._obj, 0x0200, None, 1, Type.POINTER.value, callback, 0) # MPR_PROP_DATA
 
         mpr.mpr_sig_set_cb.argtypes = [c_void_p, c_sig_cb_type, c_int]
         mpr.mpr_sig_set_cb.restype = None
@@ -818,22 +833,26 @@ class Signal(Object):
         if value == None:
             mpr.mpr_sig_set_value(self._obj, self.id, 0, MPR_INT32, None)
         elif isinstance(value, list):
-            _type = type(value[0])
+            if any(not (isinstance(x, int) or isinstance(x, float)) for x in value):
+                print("mpr.Signal.set_value() accepts only scalars or lists of type float and int")
+                return self
             _len = len(value)
-            if _type is int:
-                int_array = (c_int * _len)()
-                int_array[:] = [ int(x) for x in value ]
-                mpr.mpr_sig_set_value(self._obj, self.id, _len, Type.INT32.value, int_array)
-            elif _type is float:
+            if any(isinstance(x, float) for x in value):
                 float_array = (c_float * _len)()
                 float_array[:] = [ float(x) for x in value ]
                 mpr.mpr_sig_set_value(self._obj, self.id, _len, Type.FLOAT.value, float_array)
+            else:
+                int_array = (c_int * _len)()
+                int_array[:] = [ int(x) for x in value ]
+                mpr.mpr_sig_set_value(self._obj, self.id, _len, Type.INT32.value, int_array)
         else:
             _type = type(value)
             if _type is int:
                 mpr.mpr_sig_set_value(self._obj, self.id, 1, Type.INT32.value, byref(c_int(int(value))))
             elif _type is float:
                 mpr.mpr_sig_set_value(self._obj, self.id, 1, Type.FLOAT.value, byref(c_float(float(value))))
+            else:
+                print("mpr.Signal.set_value() accepts only scalars or lists of type float and int")
         return self
 
     def get_value(self):
@@ -1168,10 +1187,15 @@ class Device(Object):
         else:
             print("mpr.Device: missing name in constructor")
 
-#    def __del__(self):
-#        print("Device.__del__()", self, self._obj)
-#        for s in self.signals():
-#            self.remove_signal(s)
+    def free(self):
+        if not self._obj:
+            return
+        for s in self.signals():
+            self.remove_signal(s)
+        mpr.mpr_dev_free.argtypes = [c_void_p]
+        mpr.mpr_dev_free.restype = None
+        mpr.mpr_dev_free(self._obj)
+        self._obj = None
 
     def __repr__(self):
         return 'mpr.Device:{}'.format(self[Property.NAME])
@@ -1182,7 +1206,7 @@ class Device(Object):
         return mpr.mpr_dev_poll(self._obj, timeout)
 
     def add_signal(self, dir, name, length=1, datatype=Type.FLOAT, unit=None, min=None, max=None,
-                   num_int=None, callback=None, events=Signal.Event.ALL):
+                   num_inst=None, callback=None, events=Signal.Event.ALL):
         mpr.mpr_sig_new.argtypes = [c_void_p, c_int, c_char_p, c_int, c_char, c_char_p, c_void_p,
                                     c_void_p, POINTER(c_int), c_void_p, c_int]
         mpr.mpr_sig_new.restype = c_void_p
@@ -1193,8 +1217,15 @@ class Device(Object):
         signal = Signal(ptr)
         if callback != None:
             signal.set_callback(callback, events)
-
-        # TODO: set min, max, unit, instances
+        if unit != None:
+            signal.set_property(Property.UNIT, unit)
+        if min != None:
+            signal.set_property(Property.MIN, min)
+        if max != None:
+            signal.set_property(Property.MAX, max)
+        if num_inst != None and isinstance(num_inst, int):
+            signal.reserve_instances(num_inst - 1)
+            signal.set_property(Property.EPHEMERAL, True)
         return signal
 
     def remove_signal(self, signal):

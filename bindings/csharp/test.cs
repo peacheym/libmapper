@@ -15,9 +15,10 @@ public class TestCSharp
         Device dev = new Device("CSmapper");
         Console.WriteLine("created dev CSmapper");
 
-        int[] min = {1,2,3,4};
-        int[] max = {10,11,12,13};
-        Mapper.Signal outsig = dev.addSignal(Direction.Outgoing, "outsig", 1, Mapper.Type.Float);
+        int[] min = {1,2,3,4}, max = {10,11,12,13};
+        Mapper.Signal outsig = dev.addSignal(Direction.Outgoing, "outsig", 1, Mapper.Type.Float)
+                                  .setProperty(Property.Min, min)
+                                  .setProperty(Property.Max, max);
         Console.WriteLine("created signal outsig");
 
         Signal insig = dev.addSignal(Direction.Incoming, "insig", 1, Mapper.Type.Float)
@@ -31,6 +32,7 @@ public class TestCSharp
         Console.WriteLine("Device ready...");
 
         dev.setProperty("foo", 1000);
+        Console.WriteLine("property 'foo' = " + dev.getProperty("foo"));
 
         // Map map = new Map(outsig, insig);
         Map map = new Map("%y=%x*1000", insig, outsig);

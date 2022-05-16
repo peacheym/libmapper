@@ -4,7 +4,11 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <math.h>
+#ifdef WIN32
+#include <io.h>
+#else
 #include <unistd.h>
+#endif
 #include <string.h>
 #include <signal.h>
 
@@ -269,7 +273,7 @@ int main(int argc, char **argv)
     B = malloc(vec_len * sizeof(float));
     expected = malloc(vec_len * sizeof(float));
 
-    g = shared_graph ? mpr_graph_new(MPR_OBJ) : 0;
+    g = shared_graph ? mpr_graph_new(0) : 0;
 
     for (i = 0; i < vec_len; i++) {
         sMin[i] = rand() % 100;

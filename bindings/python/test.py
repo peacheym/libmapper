@@ -12,7 +12,7 @@ def h(sig, event, id, val, time):
         print('exception')
 
 def setup(d):
-    sig = d.add_signal(mpr.Direction.INCOMING, "freq", 1, mpr.Type.INT32, "Hz", None, None, None, h)
+    sig = d.add_signal(mpr.Direction.INCOMING, "freq", 1, mpr.Type.INT32, "Hz", 0, 100, None, h)
 
     while not d.ready:
         d.poll(10)
@@ -166,3 +166,6 @@ tt3 = tt1 + 0.5
 print('got tt: ', tt3.get_double())
 print(1.6 + tt1)
 print('current time:', mpr.Time().get_double())
+
+dev1.free()
+dev2.free()

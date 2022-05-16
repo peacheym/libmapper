@@ -18,7 +18,7 @@ int received = 0;
 int done = 0;
 
 int verbose = 1;
-int terminate = 0;
+int autoquit = 0;
 int period = 100;
 
 class out_stream : public std::ostream {
@@ -205,7 +205,7 @@ int main(int argc, char ** argv)
                         period = 1;
                         break;
                     case 't':
-                        terminate = 1;
+                        autoquit = 1;
                         break;
                     case '-':
                         if (strcmp(argv[i], "--iface")==0 && argc>i+1) {
@@ -401,6 +401,7 @@ int main(int argc, char ** argv)
                                               0, 0, 0, &num_inst);
     mapper::Signal multirecv = dev.add_signal(Direction::INCOMING, "multirecv", 1, Type::FLOAT,
                                               0, 0, 0, &num_inst)
+                                  .reserve_instance()
                                   .set_callback(instance_handler, Signal::Event::UPDATE);
     multisend.set_property(Property::STEAL_MODE, Signal::Stealing::OLDEST);
     multirecv.set_property(Property::STEAL_MODE, Signal::Stealing::OLDEST);

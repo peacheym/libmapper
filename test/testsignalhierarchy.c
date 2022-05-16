@@ -4,10 +4,15 @@
 #include <stdarg.h>
 #include <string.h>
 #include <time.h>
-#include <sys/time.h>
+
 #include <math.h>
 #include <lo/lo.h>
+#ifdef WIN32
+#include <io.h>
+#else
+#include <sys/time.h>
 #include <unistd.h>
+#endif
 #include <signal.h>
 #include <math.h>
 
@@ -88,7 +93,7 @@ int setup_devs(const char *iface) {
 
     seed_srand();
 
-    mpr_graph g = shared_graph ? mpr_graph_new(MPR_OBJ) : 0;
+    mpr_graph g = shared_graph ? mpr_graph_new(0) : 0;
     if (g && iface) mpr_graph_set_interface(g, iface);
 
 	for (i = 0; i < num_devs; i++) {

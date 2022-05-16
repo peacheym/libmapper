@@ -5,7 +5,11 @@
 #include <stdarg.h>
 #include <math.h>
 #include <lo/lo.h>
+#ifdef WIN32
+#include <io.h>
+#else
 #include <unistd.h>
+#endif
 #include <signal.h>
 #include <string.h>
 
@@ -706,7 +710,7 @@ int main(int argc, char **argv)
     signal(SIGSEGV, segv);
     signal(SIGINT, ctrlc);
 
-    g = shared_graph ? mpr_graph_new(MPR_OBJ) : 0;
+    g = shared_graph ? mpr_graph_new(0) : 0;
 
     if (setup_dst(g, iface)) {
         eprintf("Error initializing destination.\n");
