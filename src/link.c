@@ -44,7 +44,7 @@ void mpr_link_init(mpr_link link)
         link->clock.rcvd.time.sec = t.sec + 10;
     }
     /* request missing metadata */
-    snprintf(cmd, 256, "/%s/subscribe", link->devs[REMOTE_DEV]->name); /* MSG_SUBSCRIBE */
+    snprintf(cmd, 256, "/%s/subscribe", link->devs[REMOTE_DEV]->obj.name); /* MSG_SUBSCRIBE */
 
     msg = lo_message_new();
     if (!msg) {
@@ -72,11 +72,11 @@ void mpr_link_connect(mpr_link link, const char *host, int admin_port, int data_
         sprintf(str, "%d", admin_port);
         link->addr.admin = lo_address_new(host, str);
         trace_dev(link->devs[LOCAL_DEV], "activated link to device '%s' at %s:%d\n",
-                  link->devs[REMOTE_DEV]->name, host, data_port);
+                  link->devs[REMOTE_DEV]->obj.name, host, data_port);
     }
     else {
         trace_dev(link->devs[LOCAL_DEV], "activating link to local device '%s'\n",
-                  link->devs[REMOTE_DEV]->name);
+                  link->devs[REMOTE_DEV]->obj.name);
     }
     memset(link->bundles, 0, sizeof(mpr_bundle_t) * NUM_BUNDLES);
     mpr_dev_add_link(link->devs[LOCAL_DEV], link->devs[REMOTE_DEV]);
@@ -225,9 +225,9 @@ void mpr_link_remove_map(mpr_link link, mpr_local_map rem)
 void mpr_link_send(mpr_link link, net_msg_t cmd)
 {
     NEW_LO_MSG(msg, return);
-    lo_message_add_string(msg, link->devs[0]->name);
+    lo_message_add_string(msg, link->devs[0]->obj.name);
     lo_message_add_string(msg, "<->");
-    lo_message_add_string(msg, link->devs[1]->name);
+    lo_message_add_string(msg, link->devs[1]->obj.name);
     mpr_net_add_msg(&link->obj.graph->net, 0, cmd, msg);
 }
 

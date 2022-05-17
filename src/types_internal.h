@@ -243,6 +243,7 @@ typedef struct _mpr_obj
 {
     struct _mpr_graph *graph;       /*!< Pointer back to the graph. */
     mpr_id id;                      /*!< Unique id for this object. */
+    char *name;                     /*!< The full name for this object, or zero. */
     void *data;                     /*!< User context pointer. */
     struct _mpr_dict props;         /*!< Properties associated with this signal. */
     int version;                    /*!< Version number. */
@@ -337,7 +338,6 @@ typedef struct _mpr_sig_idmap
 #define MPR_SIG_STRUCT_ITEMS                                                            \
     mpr_obj_t obj;              /* always first */                                      \
     char *path;                 /*! OSC path.  Must start with '/'. */                  \
-    char *name;                 /*! The name of this signal (path+1). */                \
     char *unit;                 /*!< The unit of this signal, or NULL for N/A. */       \
     void *min;                  /*!< The minimum of this signal, or NULL for N/A. */    \
     void *max;                  /*!< The maximum of this signal, or NULL for N/A. */    \
@@ -523,7 +523,6 @@ typedef struct _mpr_id_map {
     mpr_obj_t obj;      /* always first */                              \
     mpr_dev *linked;                                                    \
     char *prefix;       /*!< The identifier (prefix) for this device. */\
-    char *name;         /*!< The full name for this device, or zero. */ \
     mpr_time synced;    /*!< Timestamp of last sync. */                 \
     int ordinal;                                                        \
     int num_inputs;     /*!< Number of associated input signals. */     \

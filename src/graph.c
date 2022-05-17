@@ -69,7 +69,7 @@ static void send_subscribe_msg(mpr_graph g, mpr_dev d, int flags, int timeout)
 {
     char cmd[1024];
     NEW_LO_MSG(msg, return);
-    snprintf(cmd, 1024, "/%s/subscribe", d->name); /* MSG_SUBSCRIBE */
+    snprintf(cmd, 1024, "/%s/subscribe", d->obj.name); /* MSG_SUBSCRIBE */
 
     set_net_dst(g, d);
     if (MPR_OBJ == flags)
@@ -380,7 +380,7 @@ mpr_dev mpr_graph_add_dev(mpr_graph g, const char *name, mpr_msg msg)
 
     if (!dev) {
         dev = (mpr_dev)mpr_list_add_item((void**)&g->devs, sizeof(*dev));
-        dev->name = strdup(no_slash);
+        dev->obj.name = strdup(no_slash);
         dev->obj.id = crc32(0L, (const Bytef *)no_slash, strlen(no_slash));
         dev->obj.id <<= 32;
         dev->obj.type = MPR_DEV;
@@ -428,7 +428,7 @@ void mpr_graph_remove_dev(mpr_graph g, mpr_dev d, mpr_graph_evt e, int quiet)
     FUNC_IF(mpr_tbl_free, d->obj.props.synced);
     FUNC_IF(mpr_tbl_free, d->obj.props.staged);
     FUNC_IF(free, d->linked);
-    FUNC_IF(free, d->name);
+    FUNC_IF(free, d->obj.name);
     mpr_list_free_item(d);
 }
 
@@ -439,7 +439,7 @@ mpr_dev mpr_graph_get_dev_by_name(mpr_graph g, const char *name)
     while (devs) {
         mpr_dev dev = (mpr_dev)*devs;
         devs = mpr_list_get_next(devs);
-        if (dev->name && (0 == strcmp(dev->name, no_slash)))
+        if (dev->obj.name && (0 == strcmp(dev->obj.name, no_slash)))
             return dev;
     }
     return 0;
@@ -548,9 +548,9 @@ void mpr_graph_remove_link(mpr_graph g, mpr_link l, mpr_graph_evt e)
 
 static int _compare_slot_names(const void *l, const void *r)
 {
-    int result = strcmp((*(mpr_slot*)l)->sig->dev->name, (*(mpr_slot*)r)->sig->dev->name);
+    int result = strcmp((*(mpr_slot*)l)->sig->dev->obj.name, (*(mpr_slot*)r)->sig->dev->obj.name);
     if (0 == result)
-        return strcmp((*(mpr_slot*)l)->sig->name, (*(mpr_slot*)r)->sig->name);
+        return strcmp((*(mpr_slot*)l)->sig->obj.name, (*(mpr_slot*)r)->sig->obj.name);
     return result;
 }
 

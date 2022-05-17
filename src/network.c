@@ -703,7 +703,7 @@ static void mpr_net_maybe_send_ping(mpr_net net, int force)
             if (clk->rcvd.msg_id > 0) {
                 if (num_maps)
                     trace_dev(lnk->devs[LOCAL_DEV], "Lost contact with linked device '%s' "
-                              "(%g seconds since sync).\n", lnk->devs[REMOTE_DEV]->name, elapsed);
+                              "(%g seconds since sync).\n", lnk->devs[REMOTE_DEV]->obj.name, elapsed);
                 /* tentatively mark link as expired */
                 clk->rcvd.msg_id = -1;
                 clk->rcvd.time.sec = now.sec;
@@ -711,13 +711,13 @@ static void mpr_net_maybe_send_ping(mpr_net net, int force)
             else {
                 if (num_maps) {
                     trace_dev(lnk->devs[LOCAL_DEV], "Removing link to unresponsive device '%s' "
-                              "(%g seconds since warning).\n", lnk->devs[REMOTE_DEV]->name, elapsed);
+                              "(%g seconds since warning).\n", lnk->devs[REMOTE_DEV]->obj.name, elapsed);
                     /* TODO: release related maps, call local handlers
                      * and inform subscribers. */
                 }
                 else
                     trace_dev(lnk->devs[LOCAL_DEV], "Removing link to device '%s'.\n",
-                              lnk->devs[REMOTE_DEV]->name);
+                              lnk->devs[REMOTE_DEV]->obj.name);
                 /* remove related data structures */
                 mpr_rtr_remove_link(net->rtr, lnk);
                 mpr_graph_remove_link(gph, lnk, num_maps ? MPR_OBJ_EXP : MPR_OBJ_REM);
@@ -1059,7 +1059,7 @@ static int handler_logout(const char *path, const char *types, lo_arg **av,
             /* Check if we have any links to this device, if so remove them */
             if (remote && (lnk = mpr_dev_get_link_by_remote(dev, remote))) {
                 /* TODO: release maps, call local handlers and inform subscribers */
-                trace_dev(dev, "removing link to removed device '%s'.\n", remote->name);
+                trace_dev(dev, "removing link to removed device '%s'.\n", remote->obj.name);
                 mpr_rtr_remove_link(net->rtr, lnk);
                 mpr_graph_remove_link(gph, lnk, MPR_OBJ_REM);
             }
@@ -1214,7 +1214,7 @@ static int handler_sig_mod(const char *path, const char *types, lo_arg **av,
     TRACE_DEV_RETURN_UNLESS(sig, 0, "no signal found with name '%s'.\n", &av[0]->s);
 
     props = mpr_msg_parse_props(ac-1, &types[1], &av[1]);
-    trace_dev(dev, "received %s '%s' + %d properties.\n", path, sig->name, props->num_atoms);
+    trace_dev(dev, "received %s '%s' + %d properties.\n", path, sig->obj.name, props->num_atoms);
 
     if (mpr_sig_set_from_msg(sig, props)) {
         if (dev->subscribers) {
@@ -2005,7 +2005,7 @@ static int handler_ping(const char *path, const char *types, lo_arg **av,
         if (!lnk)
             continue;
         clk = &lnk->clock;
-        trace_dev(dev, "ping received from device '%s'\n", lnk->devs[REMOTE_DEV]->name);
+        trace_dev(dev, "ping received from device '%s'\n", lnk->devs[REMOTE_DEV]->obj.name);
         if (av[2]->i == clk->sent.msg_id) {
             /* total elapsed time since ping sent */
             double elapsed = mpr_time_get_diff(now, clk->sent.time);
@@ -2059,7 +2059,7 @@ static int handler_sync(const char *path, const char *types, lo_arg **av,
     dev = mpr_graph_get_dev_by_name(graph, &av[0]->s);
     if (dev) {
         RETURN_ARG_UNLESS(!dev->is_local, 0);
-        trace_graph("updating sync record for device '%s'\n", dev->name);
+        trace_graph("updating sync record for device '%s'\n", dev->obj.name);
         mpr_time_set(&dev->synced, MPR_NOW);
 
         if (!dev->subscribed && graph->autosub) {
@@ -2070,7 +2070,7 @@ static int handler_sync(const char *path, const char *types, lo_arg **av,
     else if (graph->autosub) {
         /* only create device record after requesting more information */
         mpr_dev_t temp;
-        temp.name = &av[0]->s;
+        temp.obj.name = &av[0]->s;
         temp.obj.version = -1;
         temp.is_local = 0;
         trace_net("requesting metadata for device '%s'.\n", &av[0]->s);

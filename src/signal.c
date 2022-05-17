@@ -93,7 +93,7 @@ void mpr_sig_init(mpr_sig sig, mpr_dir dir, const char *name, int len, mpr_type 
     str_len = strlen(name)+2;
     sig->path = malloc(str_len);
     snprintf(sig->path, str_len, "/%s", name);
-    sig->name = (char*)sig->path+1;
+    sig->obj.name = (char*)sig->path+1;
     sig->len = len;
     sig->type = type;
     sig->dir = dir ? dir : MPR_DIR_OUT;
@@ -147,7 +147,7 @@ void mpr_sig_init(mpr_sig sig, mpr_dir dir, const char *name, int len, mpr_type 
     mpr_tbl_link(tbl, PROP(LEN), 1, MPR_INT32, &sig->len, rem_mod);
     mpr_tbl_link(tbl, PROP(MAX), sig->len, sig->type, &sig->max, MODIFIABLE | INDIRECT);
     mpr_tbl_link(tbl, PROP(MIN), sig->len, sig->type, &sig->min, MODIFIABLE | INDIRECT);
-    mpr_tbl_link(tbl, PROP(NAME), 1, MPR_STR, &sig->name, NON_MODIFIABLE | INDIRECT);
+    mpr_tbl_link(tbl, PROP(NAME), 1, MPR_STR, &sig->obj.name, NON_MODIFIABLE | INDIRECT);
     mpr_tbl_link(tbl, PROP(NUM_INST), 1, MPR_INT32, &sig->num_inst, NON_MODIFIABLE);
     mpr_tbl_link(tbl, PROP(NUM_MAPS_IN), 1, MPR_INT32, &sig->num_maps_in, NON_MODIFIABLE);
     mpr_tbl_link(tbl, PROP(NUM_MAPS_OUT), 1, MPR_INT32, &sig->num_maps_out, NON_MODIFIABLE);
@@ -269,7 +269,7 @@ void mpr_sig_call_handler(mpr_local_sig lsig, int evt, mpr_id inst, int len,
     mpr_sig_handler *h;
     /* abort if signal is already being processed - might be a local loop */
     if (lsig->locked) {
-        trace_dev(lsig->dev, "Mapping loop detected on signal %s! (2)\n", lsig->name);
+        trace_dev(lsig->dev, "Mapping loop detected on signal %s! (2)\n", lsig->obj.name);
         return;
     }
 
@@ -512,7 +512,7 @@ int mpr_sig_get_idmap_with_GID(mpr_local_sig lsig, mpr_id GID, int flags, mpr_ti
     else {
         /* TODO: Once signal groups are explicit, allow re-mapping to
          * another instance if possible. */
-        trace("Signal %s has no instance %"PR_MPR_ID" available.\n", lsig->name, map->LID);
+        trace("Signal %s has no instance %"PR_MPR_ID" available.\n", lsig->obj.name, map->LID);
         return -1;
     }
 
@@ -554,7 +554,7 @@ int mpr_sig_get_idmap_with_GID(mpr_local_sig lsig, mpr_id GID, int flags, mpr_ti
     else {
         si = _find_inst_by_id(lsig, map->LID);
         TRACE_RETURN_UNLESS(si && !si->active, -1, "Signal %s has no instance %"
-                            PR_MPR_ID" available.", lsig->name, map->LID);
+                            PR_MPR_ID" available.", lsig->obj.name, map->LID);
         i = _init_and_add_idmap(lsig, si, map);
         mpr_dev_LID_incref((mpr_local_dev)lsig->dev, map);
         mpr_dev_GID_incref((mpr_local_dev)lsig->dev, map);
@@ -690,14 +690,14 @@ void mpr_sig_set_value(mpr_sig sig, mpr_id id, int len, mpr_type type, const voi
     }
     if (!mpr_type_get_is_num(type)) {
 #ifdef DEBUG
-        trace("called update on signal '%s' with non-number type '%c'\n", lsig->name, type);
+        trace("called update on signal '%s' with non-number type '%c'\n", lsig->obj.name, type);
 #endif
         return;
     }
     if (len && (len != lsig->len)) {
 #ifdef DEBUG
         trace("called update on signal '%s' with value length %d (should be %d)\n",
-              lsig->name, len, lsig->len);
+              lsig->obj.name, len, lsig->len);
 #endif
         return;
     }
@@ -924,7 +924,7 @@ int mpr_sig_full_name(mpr_sig sig, char *name, int len)
     dev_name_len = strlen(dev_name);
     if (dev_name_len >= len)
         return 0;
-    if ((dev_name_len + strlen(sig->name) + 1) > len)
+    if ((dev_name_len + strlen(sig->obj.name) + 1) > len)
         return 0;
 
     snprintf(name, len, "%s%s", dev_name, sig->path);
@@ -1004,12 +1004,12 @@ void mpr_sig_send_state(mpr_sig sig, net_msg_t cmd)
     RETURN_UNLESS(msg);
 
     if (cmd == MSG_SIG_MOD) {
-        lo_message_add_string(msg, sig->name);
+        lo_message_add_string(msg, sig->obj.name);
 
         /* properties */
         mpr_tbl_add_to_msg(sig->is_local ? sig->obj.props.synced : 0, sig->obj.props.staged, msg);
 
-        snprintf(str, BUFFSIZE, "/%s/signal/modify", sig->dev->name);
+        snprintf(str, BUFFSIZE, "/%s/signal/modify", sig->dev->obj.name);
         mpr_net_add_msg(&sig->obj.graph->net, str, 0, msg);
         /* send immediately since path string is not cached */
         mpr_net_send(&sig->obj.graph->net);

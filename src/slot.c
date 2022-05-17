@@ -155,9 +155,9 @@ int mpr_slot_match_full_name(mpr_slot slot, const char *full_name)
     sig_name = strchr(full_name+1, '/');
     RETURN_ARG_UNLESS(sig_name, 1);
     len = sig_name - full_name;
-    dev_name = slot->sig->dev->name;
+    dev_name = slot->sig->dev->obj.name;
     return (strlen(dev_name) != len || strncmp(full_name, dev_name, len)
-            || strcmp(sig_name+1, slot->sig->name)) ? 1 : 0;
+            || strcmp(sig_name+1, slot->sig->obj.name)) ? 1 : 0;
 }
 
 void mpr_slot_alloc_values(mpr_local_slot slot, int num_inst, int hist_size)

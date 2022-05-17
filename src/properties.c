@@ -642,12 +642,12 @@ void mpr_prop_print(int len, mpr_type type, const void *val)
             /* just print signal name */
             if (1 == len) {
                 mpr_sig s = (mpr_sig)val;
-                printf("'%s:%s%s', ", mpr_dev_get_name(s->dev), s->name, s->is_local ? "*" : "");
+                printf("'%s:%s%s', ", mpr_dev_get_name(s->dev), s->obj.name, s->is_local ? "*" : "");
             }
             else {
                 mpr_sig *s = (mpr_sig*)val;
                 for (i = 0; i < len; i++)
-                    printf("'%s:%s%s', ", mpr_dev_get_name(s[i]->dev), s[i]->name,
+                    printf("'%s:%s%s', ", mpr_dev_get_name(s[i]->dev), s[i]->obj.name,
                            s[i]->is_local ? "*" : "");
             }
             break;
