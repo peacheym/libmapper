@@ -174,6 +174,10 @@ void mpr_obj_push(mpr_obj object);
  *  \param staged       1 to print staged properties, 0 otherwise. */
 void mpr_obj_print(mpr_obj object, int staged);
 
+/*! Add a child object to a parent object .
+ *  \param parent          The parent object that is being added to. */
+mpr_obj mpr_obj_add_child(mpr_obj parent);
+
 /*** Devices ***/
 
 /*! @defgroup devices Devices

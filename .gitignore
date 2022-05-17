@@ -84,6 +84,7 @@ test/testspeed
 test/testthread
 test/testunmap
 test/testvector
+test/testhierarchialstructure
 ### VisualStudio ###
 build
 ## Ignore Visual Studio temporary files, build results, and

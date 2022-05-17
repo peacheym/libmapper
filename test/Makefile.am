@@ -9,14 +9,14 @@ noinst_PROGRAMS = test testbundle testcalibrate testconvergent testcpp         \
                   testlinear testlocalmap testmany testmapfail testmapinput    \
                   testmapprotocol testmonitor testnetwork testparams testparser\
                   testprops testrate testreverse testsignalhierarchy           \
-                  testsignals testspeed testunmap testvector
+                  testsignals testspeed testunmap testvector testhierarchialstructure
 
 test_all_ordered = testparams testprops testgraph testparser testnetwork       \
                    testmany test testlinear testexpression testrate testbundle \
                    testinstance testreverse testvector testcustomtransport     \
                    testspeed testcpp testmapinput testconvergent testunmap     \
                    testmapfail testmapprotocol testcalibrate testlocalmap      \
-                   testsignalhierarchy
+                   testsignalhierarchy testhierarchialstructure
 else
 TEST_LDADD = $(top_builddir)/src/libmapper.la $(liblo_LIBS)
 noinst_PROGRAMS = test testbundle testcalibrate testconvergent testcpp         \
@@ -25,14 +25,14 @@ noinst_PROGRAMS = test testbundle testcalibrate testconvergent testcpp         \
                   testmapinput testmapprotocol testmonitor testnetwork         \
                   testparams testparser testprops testrate testreverse         \
                   testsignalhierarchy testsignals testspeed testthread         \
-                  testunmap testvector
+                  testunmap testvector testhierarchialstructure
 
 test_all_ordered = testparams testprops testgraph testparser testnetwork       \
                    testmany test testlinear testexpression testrate testbundle \
                    testinstance testreverse testvector testcustomtransport     \
                    testspeed testcpp testmapinput testconvergent testunmap     \
                    testmapfail testmapprotocol testcalibrate testlocalmap      \
-                   testthread testinterrupt testsignalhierarchy
+                   testthread testinterrupt testsignalhierarchy testhierarchialstructure
 endif
 
 test_CFLAGS = $(TEST_CFLAGS)
@@ -150,6 +150,10 @@ testunmap_LDADD = $(TEST_LDADD)
 testvector_CFLAGS = $(TEST_CFLAGS)
 testvector_SOURCES = testvector.c
 testvector_LDADD = $(TEST_LDADD)
+
+testhierarchialstructure_CFLAGS = $(TEST_CFLAGS)
+testhierarchialstructure_SOURCES = testhierarchialstructure.c
+testhierarchialstructure_LDADD = $(TEST_LDADD)
 
 tests: all
 	for i in $(test_all_ordered); do echo Running $$i; ./$$i -qtf; done

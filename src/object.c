@@ -307,3 +307,9 @@ void mpr_obj_print(mpr_obj o, int staged)
     }
     printf("\n");
 }
+
+mpr_obj mpr_obj_add_child(mpr_obj parent){
+    // Add a new child object to the list of children associated with the parent object.
+    mpr_obj child = (mpr_obj)mpr_list_add_item((void**)parent->children, sizeof(mpr_obj_t));
+    return child;
+} 
